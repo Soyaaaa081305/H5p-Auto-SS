@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { H5PPackage, QuizMode, ViewMode } from './types/h5p';
-import { parseH5PFile, revokeAssets } from './lib/h5pParser';
+import { parseH5PFile, fetchH5PFromUrl, revokeAssets } from './lib/h5pParser';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { Toolbar } from './components/Toolbar';
@@ -23,7 +23,6 @@ export const App: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      // Clean up previous blob URLs if any
       if (pkg?.assetMap) {
         revokeAssets(pkg.assetMap);
       }
@@ -38,6 +37,34 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleUrlLoaded = async (url: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      if (pkg?.assetMap) {
+        revokeAssets(pkg.assetMap);
+      }
+
+      const parsedPkg = await fetchH5PFromUrl(url);
+      setPkg(parsedPkg);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Failed to load H5P from URL.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Support ?url= or ?h5p= in query string (e.g. from bookmarklet or external link)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlParam = params.get('url') || params.get('h5p');
+    if (urlParam) {
+      handleUrlLoaded(urlParam);
+    }
+  }, []);
+
   const handleReset = () => {
     if (pkg?.assetMap) {
       revokeAssets(pkg.assetMap);
@@ -47,13 +74,14 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100/80">
+    <div className="min-h-screen flex flex-col bg-zinc-50 text-zinc-900">
       <Header />
 
       <main className="flex-1">
         {!pkg ? (
           <DropZone
             onFileLoaded={handleFileLoaded}
+            onUrlLoaded={handleUrlLoaded}
             isLoading={isLoading}
             error={error}
           />

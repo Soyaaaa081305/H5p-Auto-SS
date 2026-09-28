@@ -112,3 +112,37 @@ export function revokeAssets(assetMap: Map<string, string>) {
   }
   assetMap.clear();
 }
+
+export async function fetchH5PFromUrl(url: string): Promise<H5PPackage> {
+  const trimmed = url.trim();
+
+  // Detect Blackboard URLs
+  if (trimmed.includes('blackboard.com')) {
+    throw new Error(
+      'Blackboard links require your active school login session. An external link cannot bypass login. Please open the H5P in Blackboard, click "Reuse" or "Download" at the bottom of the player frame to download the .h5p file, and drop it here!'
+    );
+  }
+
+  // Attempt direct fetch
+  let response: Response | null = null;
+  try {
+    response = await fetch(trimmed);
+  } catch {
+    // Attempt with proxy if CORS blocks
+    try {
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(trimmed)}`;
+      response = await fetch(proxyUrl);
+    } catch (e) {
+      throw new Error('Failed to fetch file from URL. Please verify the URL or download the .h5p file directly.');
+    }
+  }
+
+  if (!response || !response.ok) {
+    throw new Error(`Failed to download from URL (Status ${response?.status || 'Unknown'}). Verify the URL points to a public .h5p file.`);
+  }
+
+  const blob = await response.blob();
+  const filename = trimmed.split('/').pop()?.split('?')[0] || 'presentation.h5p';
+  return parseH5PFile(blob, filename.endsWith('.h5p') ? filename : `${filename}.h5p`);
+}
+
