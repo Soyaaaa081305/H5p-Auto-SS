@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { H5PPackage } from '../types/h5p';
-import { X, Copy, Check, Printer, BookOpen, Sparkles } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Sparkles } from 'lucide-react';
 
 interface ReviewerModalProps {
   pkg: H5PPackage;
@@ -206,10 +206,6 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] overflow-y-auto bg-zinc-950/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 print:p-0 print:bg-white print:static"
@@ -257,15 +253,6 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
                   <span>Copy for Anki / Notion</span>
                 </>
               )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
-              title="Print Reviewer Sheet"
-            >
-              <Printer className="w-4 h-4" />
             </button>
 
             <button
