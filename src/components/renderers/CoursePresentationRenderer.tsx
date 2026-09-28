@@ -2,7 +2,6 @@ import React from 'react';
 import { CoursePresentationContent, H5PSlide } from '../../types/h5p';
 import { resolveAsset } from '../../lib/h5pParser';
 import { ElementDispatcher } from './ElementDispatcher';
-import { ExternalLink } from 'lucide-react';
 
 interface CoursePresentationRendererProps {
   content: CoursePresentationContent;
@@ -22,22 +21,6 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
       </div>
     );
   }
-
-  // Find Canva or presentation link if present
-  let canvaUrl: string | null = null;
-  slides.forEach((s) => {
-    (s.elements || []).forEach((el) => {
-      if (el.action?.library?.includes('Link')) {
-        let u = el.action.params?.linkWidget?.url || el.action.params?.url || '';
-        const proto = el.action.params?.linkWidget?.protocol || '';
-        if (proto && !u.startsWith('http://') && !u.startsWith('https://')) {
-          u = `${proto}${u}`;
-        }
-        u = u.replace(/&amp;/g, '&');
-        if (u) canvaUrl = u;
-      }
-    });
-  });
 
   return (
     <div className="space-y-10 print:space-y-0 print:p-0 print:m-0 max-w-5xl mx-auto">
@@ -70,19 +53,6 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
               <span className="font-medium text-zinc-800">
                 Slide {slideIdx + 1} / {slides.length}
               </span>
-
-              {/* If Slide 1 has Canva link, put clean button directly in slide header */}
-              {slideIdx === 0 && canvaUrl && (
-                <a
-                  href={canvaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-sans font-semibold text-xs transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Click to View Slides in Canva</span>
-                </a>
-              )}
             </div>
 
             {/* Slide Canvas */}
@@ -110,8 +80,10 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
                   />
                 )}
 
-                {/* Overlaid elements */}
+                {/* Overlaid elements (exclude duplicate link buttons since Toolbar has the single official button) */}
                 {elements.map((el, elIdx) => {
+                  if (el.action?.library?.includes('Link')) return null;
+
                   const left = `${el.x}%`;
                   const top = `${el.y}%`;
                   const width = `${el.width}%`;
