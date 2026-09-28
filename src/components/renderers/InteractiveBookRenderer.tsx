@@ -21,17 +21,17 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
     <div className="max-w-4xl mx-auto space-y-10">
       {/* Cover / Book Title */}
       {(coverUrl || content.bookCover?.coverDescription) && (
-        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center print:border-none print:shadow-none print:p-0">
+        <div className="bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs text-center print:border-none print:shadow-none print:p-0">
           {coverUrl && (
             <img
               src={coverUrl}
               alt="Book Cover"
-              className="max-h-80 mx-auto rounded-xl object-contain mb-6 shadow"
+              className="max-h-80 mx-auto rounded-xl object-contain mb-6 shadow-sm"
             />
           )}
           {content.bookCover?.coverDescription && (
             <div
-              className="text-slate-700 text-base max-w-2xl mx-auto"
+              className="text-zinc-700 text-base max-w-2xl mx-auto"
               dangerouslySetInnerHTML={{ __html: content.bookCover.coverDescription }}
             />
           )}
@@ -45,13 +45,13 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
         return (
           <section
             key={cIdx}
-            className="print-section bg-white rounded-2xl p-8 border border-slate-200 shadow-sm print:border-none print:shadow-none print:p-0 print:mb-8"
+            className="print-section bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs print:border-none print:shadow-none print:p-0 print:mb-8"
           >
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-200 print:border-slate-400">
-              <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 print:hidden">
+            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-zinc-200 print:border-zinc-400">
+              <div className="p-2 rounded-lg bg-zinc-100 text-zinc-800 print:hidden">
                 <BookOpen className="w-5 h-5" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-zinc-900 font-sans">
                 Chapter {cIdx + 1}: {chapter.title || 'Untitled Chapter'}
               </h2>
             </div>
