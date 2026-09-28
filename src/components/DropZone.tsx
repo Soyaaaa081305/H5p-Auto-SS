@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Loader2, Plus, FileCode2, Link as LinkIcon, ArrowRight } from 'lucide-react';
+import { Loader2, Plus, FileCode2, Link as LinkIcon, ArrowRight, Bookmark } from 'lucide-react';
 
 interface DropZoneProps {
   onFileLoaded: (file: File | Blob, customName?: string) => Promise<void>;
@@ -48,6 +48,9 @@ export const DropZone: React.FC<DropZoneProps> = ({
     if (!inputUrl.trim()) return;
     onUrlLoaded(inputUrl.trim());
   };
+
+  // 1-Click Bookmarklet code that clicks the H5P Reuse / Download button in Blackboard
+  const bookmarkletCode = `javascript:(function(){var b=document.querySelector('.h5p-reuse')||document.querySelector('button[aria-label*="Reuse"]')||document.querySelector('iframe')?.contentDocument?.querySelector('.h5p-reuse');if(b){b.click();}else{window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/');}})();`;
 
   return (
     <div className="no-print max-w-2xl mx-auto px-4 py-16 sm:py-20">
@@ -139,7 +142,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
       )}
 
-      {/* Tab 2: URL Link Importer (Minimal & Clean, No Blackboard Note) */}
+      {/* Tab 2: URL Link Importer */}
       {tab === 'url' && (
         <div className="bg-white rounded-2xl border border-zinc-300/80 p-6 sm:p-8 shadow-xs">
           <form onSubmit={handleUrlSubmit} className="space-y-4">
@@ -181,6 +184,37 @@ export const DropZone: React.FC<DropZoneProps> = ({
           </form>
         </div>
       )}
+
+      {/* Front-of-Page 1-Click Blackboard Bookmarklet Card */}
+      <div className="mt-8 p-4 rounded-2xl bg-white border border-zinc-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-9 h-9 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center flex-shrink-0">
+            <Bookmark className="w-4 h-4 text-zinc-800" />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-zinc-900 font-sans">
+              Blackboard 1-Click Bookmarklet
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Drag this button to your browser Bookmarks Bar to download .h5p from Blackboard with 1 click.
+            </div>
+          </div>
+        </div>
+
+        <a
+          href={bookmarkletCode}
+          onClick={(e) => {
+            e.preventDefault();
+            alert("Drag this button up to your browser's Bookmarks Bar! (Press Cmd+Shift+B on Mac if bookmarks bar is hidden). Then click it whenever you are on Blackboard to download the .h5p instantly.");
+          }}
+          draggable={true}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-xs transition-transform active:scale-95 cursor-grab active:cursor-grabbing flex-shrink-0"
+          title="Drag to your browser's Bookmarks bar"
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span>⚡ Drag Bookmarklet</span>
+        </a>
+      </div>
 
       {/* Error notification if any */}
       {error && (
