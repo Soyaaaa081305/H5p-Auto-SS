@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { H5PPackage } from '../types/h5p';
 import { X, Copy, Check, Printer, BookOpen, Sparkles } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface QuestionItem {
   id: string;
   slideNumber: number;
   type: 'blanks' | 'summary' | 'multichoice' | 'truefalse';
+  promptTitle: string;
   question: string;
   correctAnswer: string;
   distractors?: string[];
@@ -25,6 +27,28 @@ function cleanHtml(html: string): string {
 
 export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Lock background scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -73,6 +97,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
               id: `blank-${sIdx}-${questions.length}`,
               slideNumber: sIdx + 1,
               type: 'blanks',
+              promptTitle: `Fill in the Blank`,
               question: qText,
               correctAnswer: ans,
             });
@@ -96,6 +121,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
               id: `blank-${sIdx}-${questions.length}`,
               slideNumber: sIdx + 1,
               type: 'blanks',
+              promptTitle: `Fill in the Blank`,
               question: qText.trim(),
               correctAnswer: ans,
             });
@@ -113,7 +139,8 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
               id: `summary-${sIdx}-${itemIdx}`,
               slideNumber: sIdx + 1,
               type: 'summary',
-              question: `Statement Choice #${itemIdx + 1}: Which statement is correct?`,
+              promptTitle: `Choose Correct Statement #${itemIdx + 1}`,
+              question: 'Which statement accurately describes the course concept?',
               correctAnswer: cleanHtml(statements[0]),
               distractors: statements.slice(1).map(cleanHtml),
             });
@@ -132,6 +159,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
           id: `mc-${sIdx}-${questions.length}`,
           slideNumber: sIdx + 1,
           type: 'multichoice',
+          promptTitle: `Multiple Choice`,
           question: qText,
           correctAnswer: correct ? cleanHtml(correct.text) : 'None marked',
           distractors,
@@ -147,6 +175,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
           id: `tf-${sIdx}-${questions.length}`,
           slideNumber: sIdx + 1,
           type: 'truefalse',
+          promptTitle: `True or False`,
           question: qText,
           correctAnswer: isTrue ? 'True' : 'False',
           distractors: [isTrue ? 'False' : 'True'],
@@ -161,9 +190,9 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
 
     questions.forEach((q, idx) => {
       text += `### Q${idx + 1}: ${q.question} (Slide ${q.slideNumber})\n`;
-      text += `**Correct Answer:** ${q.correctAnswer}\n`;
+      text += `**✓ Correct Answer:** ${q.correctAnswer}\n`;
       if (q.distractors && q.distractors.length > 0) {
-        text += `*Distractors:* ${q.distractors.join(' | ')}\n`;
+        text += `*Incorrect Options:* ${q.distractors.join(' | ')}\n`;
       }
       text += `\n`;
     });
@@ -181,24 +210,32 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 print:p-0 print:bg-white print:static">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden print:max-h-none print:shadow-none print:border-none">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-zinc-950/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 print:p-0 print:bg-white print:static"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden relative z-[10000] print:max-h-none print:shadow-none print:border-none my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="no-print px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+        <div className="no-print px-6 py-4 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 bg-zinc-50 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-200 text-emerald-800 flex items-center justify-center flex-shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-zinc-900 font-sans flex items-center gap-2">
-                Exam Reviewer & Answer Key
+                <span>Exam Reviewer & Answer Key</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-semibold">
                   {questions.length} Questions
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 font-normal">
-                Condensed study guide extracted from {pkg.metadata.title || pkg.fileName}
+                Course questions & verified answers from {pkg.metadata.title || pkg.fileName}
               </p>
             </div>
           </div>
@@ -235,6 +272,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+              title="Close (Esc)"
             >
               <X className="w-4 h-4" />
             </button>
@@ -251,32 +289,50 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
             questions.map((q, idx) => (
               <div
                 key={q.id}
-                className="p-4 rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 transition-colors shadow-2xs"
+                className="p-4 sm:p-5 rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 transition-colors shadow-2xs space-y-2.5"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-bold text-zinc-900">
-                    Question {idx + 1}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded">
+                      Question {idx + 1}
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-400">
+                      {q.promptTitle}
+                    </span>
+                  </div>
                   <span className="text-[11px] font-mono text-zinc-400">
                     Slide {q.slideNumber}
                   </span>
                 </div>
 
-                <p className="text-sm font-medium text-zinc-800 leading-relaxed mb-3">
+                {/* Question Prompt */}
+                <p className="text-sm font-medium text-zinc-800 leading-relaxed">
                   {q.question}
                 </p>
 
-                {/* Correct Answer Pill */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                  <span>Correct Answer: {q.correctAnswer}</span>
+                {/* Correct Statement / Answer */}
+                <div className="p-3 rounded-lg bg-emerald-50/90 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-950 font-medium">
+                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold text-emerald-800 font-mono text-[11px] block mb-0.5">
+                      ✓ CORRECT STATEMENT / ANSWER:
+                    </span>
+                    <span className="leading-relaxed">{q.correctAnswer}</span>
+                  </div>
                 </div>
 
                 {/* Distractors if any */}
                 {q.distractors && q.distractors.length > 0 && (
-                  <div className="mt-2 text-xs text-zinc-400 font-sans">
-                    <span className="font-semibold text-zinc-500">Other options:</span>{' '}
-                    {q.distractors.join(' · ')}
+                  <div className="space-y-1.5 pt-1">
+                    {q.distractors.map((dist, dIdx) => (
+                      <div
+                        key={dIdx}
+                        className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200/80 text-xs text-zinc-500 flex items-start gap-2"
+                      >
+                        <span className="text-zinc-400 font-bold flex-shrink-0 mt-0.5">✗</span>
+                        <span className="leading-relaxed">{dist}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -285,7 +341,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
         </div>
 
         {/* Modal Footer */}
-        <div className="no-print px-6 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
+        <div className="no-print px-6 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500 flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Ready for exam cramming, Anki flashcards, and quick revision.</span>
@@ -293,12 +349,13 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-100 font-medium text-xs shadow-2xs"
+            className="px-4 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 font-medium text-xs shadow-2xs transition-colors"
           >
             Close
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
