@@ -53,10 +53,10 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5">
           <span className="font-semibold tracking-tight text-zinc-900 text-sm font-sans">
-            H5P<span className="text-zinc-400 font-light">/</span>PDF
+            H5P to PDF
           </span>
-          <span className="text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-            Studio
+          <span className="text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+            Viewer
           </span>
         </div>
       </div>
