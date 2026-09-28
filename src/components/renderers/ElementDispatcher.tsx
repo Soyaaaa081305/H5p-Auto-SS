@@ -2,6 +2,7 @@ import React from 'react';
 import { H5PElementAction } from '../../types/h5p';
 import { resolveAsset } from '../../lib/h5pParser';
 import { BlanksRenderer } from './BlanksRenderer';
+import { SummaryRenderer } from './SummaryRenderer';
 import { MultiChoiceRenderer } from './MultiChoiceRenderer';
 import { ExternalLink } from 'lucide-react';
 
@@ -25,7 +26,12 @@ export const ElementDispatcher: React.FC<ElementDispatcherProps> = ({
     return <BlanksRenderer params={params} />;
   }
 
-  // 2. Multiple choice / Single choice / True False
+  // 2. Summary (Choose correct statement)
+  if (library.startsWith('H5P.Summary')) {
+    return <SummaryRenderer params={params} />;
+  }
+
+  // 3. Multiple choice / Single choice / True False
   if (
     library.startsWith('H5P.MultiChoice') ||
     library.startsWith('H5P.SingleChoiceSet') ||

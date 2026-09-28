@@ -38,8 +38,11 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
         const hasMajorQuiz = elements.some(
           (el) =>
             el.action?.library.startsWith('H5P.Blanks') ||
+            el.action?.library.startsWith('H5P.Summary') ||
             el.action?.library.startsWith('H5P.QuestionSet') ||
-            el.action?.library.startsWith('H5P.MultiChoice')
+            el.action?.library.startsWith('H5P.MultiChoice') ||
+            el.action?.library.startsWith('H5P.SingleChoiceSet') ||
+            el.action?.library.startsWith('H5P.TrueFalse')
         );
 
         return (

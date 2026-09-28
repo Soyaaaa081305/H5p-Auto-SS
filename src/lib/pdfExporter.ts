@@ -153,6 +153,92 @@ function renderBlanksOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   });
 }
 
+function renderSummaryOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const intro = cleanHtml(params.intro || 'Choose the correct statement:');
+  const summaries: Array<{ summary: string[] }> = params.summaries || [];
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(60, 50, 1800, 980);
+  ctx.strokeRect(60, 50, 1800, 980);
+
+  // Header Title
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Review & Practice: Choose the Correct Statement', 100, 120);
+
+  // Subtitle / Prompt
+  ctx.fillStyle = '#64748b';
+  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(`${intro} (Right answers are marked with ✓)`, 100, 160);
+
+  // Divider line
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(100, 185);
+  ctx.lineTo(1820, 185);
+  ctx.stroke();
+
+  // Render 2 columns of 5 questions each
+  const leftX = 100;
+  const rightX = 970;
+  const colWidth = 850;
+  const cardHeight = 138;
+
+  summaries.forEach((item, idx) => {
+    const isRight = idx >= 5;
+    const colX = isRight ? rightX : leftX;
+    const rowIdx = isRight ? idx - 5 : idx;
+    const cardY = 210 + rowIdx * (cardHeight + 16);
+
+    const statements = item.summary || [];
+    const correctStatement = cleanHtml(statements[0] || '');
+    const wrongStatement = cleanHtml(statements[1] || '');
+
+    // Card background
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(colX, cardY, colWidth, cardHeight);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
+
+    // Number tag
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Question ${idx + 1}`, colX + 20, cardY + 28);
+
+    // Correct statement box (green)
+    ctx.fillStyle = '#ecfdf5';
+    ctx.fillRect(colX + 20, cardY + 38, colWidth - 40, 48);
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(colX + 20, cardY + 38, colWidth - 40, 48);
+
+    ctx.fillStyle = '#065f46';
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wrapText(ctx, `✓ ${correctStatement}`, colX + 30, cardY + 62, colWidth - 60, 18);
+
+    // Distractor box (muted/gray)
+    if (wrongStatement) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(colX + 20, cardY + 92, colWidth - 40, 36);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(colX + 20, cardY + 92, colWidth - 40, 36);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, `✗ ${wrongStatement}`, colX + 30, cardY + 114, colWidth - 60, 16);
+    }
+  });
+}
+
 async function renderSlideToCanvas(
   slide: any,
   slideIndex: number,
@@ -193,6 +279,8 @@ async function renderSlideToCanvas(
 
     if (library.startsWith('H5P.Blanks')) {
       renderBlanksOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.Summary')) {
+      renderSummaryOnCanvas(ctx, params);
     }
   }
 
