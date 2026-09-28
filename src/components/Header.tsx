@@ -18,7 +18,7 @@ export const Header: React.FC = () => {
               H5P to PDF Website Bookmarklet
             </span>
             <span className="text-[11px] text-zinc-500 leading-tight">
-              Drag this button to your Bookmarks Bar. On Blackboard, it downloads the .h5p module and opens H5P to PDF Website.
+              Drag this button to your Bookmarks Bar
             </span>
           </div>
 
