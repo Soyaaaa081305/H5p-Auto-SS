@@ -49,8 +49,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
     onUrlLoaded(inputUrl.trim());
   };
 
-  // 1-Click Bookmarklet code that clicks the H5P Reuse / Download button in Blackboard
-  const bookmarkletCode = `javascript:(function(){var b=document.querySelector('.h5p-reuse')||document.querySelector('button[aria-label*="Reuse"]')||document.querySelector('iframe')?.contentDocument?.querySelector('.h5p-reuse');if(b){b.click();}else{window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/');}})();`;
+  // 1-Click Bookmarklet code: triggers H5P download on Blackboard and opens H5P to PDF Website
+  const bookmarkletCode = `javascript:(function(){var d=document,b=d.querySelector('.h5p-reuse')||d.querySelector('button[aria-label*="Reuse"]');if(!b){var f=d.querySelectorAll('iframe');for(var i=0;i<f.length;i++){try{var ib=f[i].contentDocument?.querySelector('.h5p-reuse')||f[i].contentDocument?.querySelector('button[aria-label*="Reuse"]');if(ib){b=ib;break;}}catch(e){}}}if(b){b.click();}window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');})();`;
 
   return (
     <div className="no-print max-w-2xl mx-auto px-4 py-16 sm:py-20">
@@ -193,10 +193,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
           </div>
           <div>
             <div className="text-xs font-semibold text-zinc-900 font-sans">
-              Blackboard 1-Click Bookmarklet
+              H5P to PDF Website Bookmarklet
             </div>
             <div className="text-[11px] text-zinc-500">
-              Drag this button to your browser Bookmarks Bar to download .h5p from Blackboard with 1 click.
+              Drag this button to your Bookmarks Bar. On Blackboard, it downloads the .h5p module and opens H5P to PDF Website.
             </div>
           </div>
         </div>
@@ -205,14 +205,14 @@ export const DropZone: React.FC<DropZoneProps> = ({
           href={bookmarkletCode}
           onClick={(e) => {
             e.preventDefault();
-            alert("Drag this button up to your browser's Bookmarks Bar! (Press Cmd+Shift+B on Mac if bookmarks bar is hidden). Then click it whenever you are on Blackboard to download the .h5p instantly.");
+            alert("Drag this button to your browser's Bookmarks Bar! (Cmd+Shift+B on Mac or Ctrl+Shift+B on Windows). When clicked on Blackboard, it downloads the .h5p and opens H5P to PDF Website!");
           }}
           draggable={true}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-xs transition-transform active:scale-95 cursor-grab active:cursor-grabbing flex-shrink-0"
-          title="Drag to your browser's Bookmarks bar"
+          title="Drag this to your Bookmarks Bar"
         >
           <Bookmark className="w-3.5 h-3.5" />
-          <span>⚡ Drag Bookmarklet</span>
+          <span>H5P to PDF Website</span>
         </a>
       </div>
 
