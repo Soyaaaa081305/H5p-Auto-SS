@@ -1,8 +1,7 @@
 import { jsPDF } from 'jspdf';
-import { H5PPackage, QuizMode } from '../types/h5p';
+import { H5PPackage } from '../types/h5p';
 import { resolveAsset } from './h5pParser';
 
-// Helper to load an image into an HTMLImageElement
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -13,26 +12,157 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Strip HTML tags and entities
 function cleanHtml(html: string): string {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
   return tmp.textContent || tmp.innerText || '';
 }
 
-// Render a single slide onto a 1920x1080 canvas
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number
+) {
+  const words = text.split(' ');
+  let line = '';
+  let curY = y;
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      ctx.fillText(line, x, curY);
+      line = words[n] + ' ';
+      curY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, curY);
+}
+
+// Render clean, high-resolution text and cards for Fill in the Blanks quiz slide
+function renderBlanksOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const prompt = cleanHtml(params.text || 'Fill in the missing words:');
+  const rawQuestions: string[] = params.questions || [];
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(60, 50, 1800, 980);
+  ctx.strokeRect(60, 50, 1800, 980);
+
+  // Header Title
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Review & Practice: Fill in the Blanks', 100, 120);
+
+  // Subtitle / Prompt
+  ctx.fillStyle = '#64748b';
+  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(prompt, 100, 160);
+
+  // Divider line
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(100, 185);
+  ctx.lineTo(1820, 185);
+  ctx.stroke();
+
+  // Extract individual question strings using regex
+  const items: string[] = [];
+  rawQuestions.forEach((qStr: string) => {
+    const pRegex = /<p>(.*?)<\/p>/gi;
+    let match;
+    let found = false;
+    while ((match = pRegex.exec(qStr)) !== null) {
+      found = true;
+      if (match[1].trim()) items.push(match[1].trim());
+    }
+    if (!found && qStr.trim()) items.push(qStr.trim());
+  });
+
+  // Render 2 columns of 5 questions each
+  const leftX = 100;
+  const rightX = 970;
+  const colWidth = 850;
+  const cardHeight = 138;
+
+  items.forEach((item, idx) => {
+    const isRight = idx >= 5;
+    const colX = isRight ? rightX : leftX;
+    const rowIdx = isRight ? idx - 5 : idx;
+    const cardY = 210 + rowIdx * (cardHeight + 16);
+
+    // Question box
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(colX, cardY, colWidth, cardHeight);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
+
+    // Number tag
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Question ${idx + 1}`, colX + 20, cardY + 28);
+
+    // Parse text and solution
+    const parts = item.split(/(\*[^*]+\*)/g);
+    let fullText = '';
+    let solution = '';
+
+    parts.forEach((p) => {
+      if (p.startsWith('*') && p.endsWith('*')) {
+        const raw = p.slice(1, -1);
+        const [sol] = raw.split(':');
+        solution = sol.split('/')[0].trim();
+        fullText += ` [ ${solution} ] `;
+      } else {
+        fullText += p.replace(/<[^>]+>/g, '');
+      }
+    });
+
+    fullText = fullText.replace(/^\s*\(\d+\)\s*/, '');
+
+    // Draw question text wrapped
+    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#334155';
+    wrapText(ctx, fullText, colX + 20, cardY + 56, colWidth - 40, 22);
+
+    // Draw green answer pill at bottom of card
+    if (solution) {
+      ctx.fillStyle = '#ecfdf5';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1;
+      const ansWidth = ctx.measureText(`✓ Answer: ${solution}`).width + 24;
+      ctx.fillRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
+      ctx.strokeRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`✓ Answer: ${solution}`, colX + 28, cardY + cardHeight - 18);
+    }
+  });
+}
+
 async function renderSlideToCanvas(
   slide: any,
   slideIndex: number,
-  assetMap: Map<string, string>,
-  quizMode: QuizMode
+  assetMap: Map<string, string>
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   canvas.width = 1920;
   canvas.height = 1080;
   const ctx = canvas.getContext('2d')!;
 
-  // Default white background
   const bgColor =
     slide.slideBackgroundSelector?.fillSlideBackground ||
     slide.slideBackgroundSelector?.fillColorSelector ||
@@ -40,7 +170,7 @@ async function renderSlideToCanvas(
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, 1920, 1080);
 
-  // 1. Draw Background Image if present
+  // Background Image
   const bgImgPath = slide.slideBackgroundSelector?.imageSlideBackground?.path;
   const bgUrl = resolveAsset(bgImgPath, assetMap);
 
@@ -53,161 +183,24 @@ async function renderSlideToCanvas(
     }
   }
 
-  // 2. Render Elements
+  // Check for Quiz elements (e.g. Slide 15)
   const elements: any[] = slide.elements || [];
-
   for (const el of elements) {
     const action = el.action;
     if (!action) continue;
-
     const library: string = action.library || '';
     const params = action.params || {};
 
-    // Render Blanks Quiz (Fill in the blanks)
     if (library.startsWith('H5P.Blanks')) {
-      renderBlanksOnCanvas(ctx, params, quizMode);
-    } else if (library.startsWith('H5P.Link')) {
-      // Optional subtle badge for links on slides if no background or desired
-      if (!bgUrl) {
-        const linkUrl = params.linkWidget?.url || params.url || '';
-        const title = params.title || 'Link';
-        ctx.fillStyle = '#4f46e5';
-        ctx.beginPath();
-        ctx.roundRect(100, 920, 400, 60, 12);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-        ctx.fillText(`🔗 ${title}: ${linkUrl}`, 120, 958);
-      }
+      renderBlanksOnCanvas(ctx, params);
     }
   }
 
   return canvas;
 }
 
-// Render clean, high-resolution text and badges for Fill in the Blanks quiz slide
-function renderBlanksOnCanvas(ctx: CanvasRenderingContext2D, params: any, quizMode: QuizMode) {
-  const prompt = cleanHtml(params.text || 'Fill in the missing words:');
-  const rawQuestions: string[] = params.questions || [];
-
-  // Card Background
-  ctx.fillStyle = '#fafafa';
-  ctx.beginPath();
-  ctx.roundRect(80, 80, 1760, 920, 24);
-  ctx.fill();
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  // Header Title
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-  ctx.fillText('Interactive Quiz: Fill in the Blanks', 130, 160);
-
-  // Subtitle / Prompt
-  ctx.fillStyle = '#475569';
-  ctx.font = '500 24px system-ui, -apple-system, sans-serif';
-  ctx.fillText(prompt, 130, 205);
-
-  // Divider
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(130, 230);
-  ctx.lineTo(1790, 230);
-  ctx.stroke();
-
-  // Parse questions
-  const parsedItems: string[] = [];
-  for (const q of rawQuestions) {
-    const div = document.createElement('div');
-    div.innerHTML = q;
-    const pElements = div.querySelectorAll('p');
-    if (pElements.length > 0) {
-      pElements.forEach((p) => {
-        if (p.textContent?.trim()) parsedItems.push(p.innerHTML);
-      });
-    } else if (div.textContent?.trim()) {
-      parsedItems.push(div.innerHTML);
-    }
-  }
-
-  // Draw 2 columns of questions
-  const leftX = 130;
-  const rightX = 960;
-  const colWidth = 790;
-  let currentY = 280;
-
-  parsedItems.forEach((itemHtml, idx) => {
-    const isRightCol = idx >= Math.ceil(parsedItems.length / 2);
-    const colX = isRightCol ? rightX : leftX;
-    if (isRightCol && idx === Math.ceil(parsedItems.length / 2)) {
-      currentY = 280; // Reset for second column
-    }
-
-    // Question row container
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.roundRect(colX, currentY - 32, colWidth, 58, 10);
-    ctx.fill();
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Parse parts with *answers*
-    const parts = itemHtml.split(/(\*[^*]+\*)/g);
-    let renderX = colX + 18;
-    const textY = currentY + 4;
-
-    for (const part of parts) {
-      if (part.startsWith('*') && part.endsWith('*')) {
-        const rawSolution = part.slice(1, -1);
-        const [solutionsPart] = rawSolution.split(':');
-        const answer = solutionsPart.split('/')[0].trim();
-
-        if (quizMode === 'study') {
-          // Draw solution badge
-          ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-          const badgeText = ` ${answer} `;
-          const textWidth = ctx.measureText(badgeText).width + 12;
-
-          ctx.fillStyle = '#ecfdf5';
-          ctx.beginPath();
-          ctx.roundRect(renderX, textY - 22, textWidth, 30, 6);
-          ctx.fill();
-          ctx.strokeStyle = '#34d399';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          ctx.fillStyle = '#065f46';
-          ctx.fillText(badgeText, renderX + 4, textY);
-          renderX += textWidth + 8;
-        } else {
-          // Draw empty blank
-          const blankStr = '_______________';
-          ctx.font = 'bold 18px monospace';
-          const textWidth = ctx.measureText(blankStr).width;
-          ctx.fillStyle = '#64748b';
-          ctx.fillText(blankStr, renderX, textY);
-          renderX += textWidth + 8;
-        }
-      } else {
-        const plainText = cleanHtml(part);
-        ctx.font = '18px system-ui, -apple-system, sans-serif';
-        ctx.fillStyle = '#1e293b';
-        ctx.fillText(plainText, renderX, textY);
-        renderX += ctx.measureText(plainText).width;
-      }
-    }
-
-    currentY += 68;
-  });
-}
-
-// Main Export Function: Compiles 1920x1080 slides into exact high-quality PDF
 export async function exportSlidesToPdf(
   pkg: H5PPackage,
-  quizMode: QuizMode,
   onProgress?: (current: number, total: number) => void
 ): Promise<void> {
   const slides: any[] = pkg.content?.presentation?.slides || [];
@@ -215,7 +208,6 @@ export async function exportSlidesToPdf(
     throw new Error('No slides found to export.');
   }
 
-  // Exact 16:9 PDF dimensions in points/pixels
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'px',
@@ -234,7 +226,7 @@ export async function exportSlidesToPdf(
       doc.addPage([1920, 1080], 'landscape');
     }
 
-    const canvas = await renderSlideToCanvas(slides[i], i, pkg.assetMap, quizMode);
+    const canvas = await renderSlideToCanvas(slides[i], i, pkg.assetMap);
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
     doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');

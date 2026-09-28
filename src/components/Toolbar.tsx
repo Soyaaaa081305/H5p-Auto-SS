@@ -1,31 +1,19 @@
 import React, { useState } from 'react';
-import { QuizMode, ViewMode, H5PPackage } from '../types/h5p';
+import { H5PPackage } from '../types/h5p';
 import { exportSlidesToPdf } from '../lib/pdfExporter';
 import {
   Download,
-  Printer,
   RotateCcw,
   Loader2,
-  Check,
+  ExternalLink,
 } from 'lucide-react';
 
 interface ToolbarProps {
   pkg: H5PPackage;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  quizMode: QuizMode;
-  onQuizModeChange: (mode: QuizMode) => void;
   onReset: () => void;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({
-  pkg,
-  viewMode,
-  onViewModeChange,
-  quizMode,
-  onQuizModeChange,
-  onReset,
-}) => {
+export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<string>('');
 
@@ -33,7 +21,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     try {
       setIsExporting(true);
       setExportProgress('Preparing slides...');
-      await exportSlidesToPdf(pkg, quizMode, (curr, total) => {
+      await exportSlidesToPdf(pkg, (curr, total) => {
         setExportProgress(`Compiling ${curr}/${total}`);
       });
     } catch (err: any) {
@@ -45,13 +33,25 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   };
 
-  const handleNativePrint = () => {
-    document.body.setAttribute('data-view-mode', viewMode);
-    window.print();
-  };
-
   const title = pkg.metadata.title || pkg.fileName;
   const slideCount = pkg.content?.presentation?.slides?.length;
+
+  // Extract Canva / external presentation link
+  let canvaUrl: string | null = null;
+  const slides: any[] = pkg.content?.presentation?.slides || [];
+  slides.forEach((s) => {
+    (s.elements || []).forEach((el: any) => {
+      if (el.action?.library?.includes('Link')) {
+        let u = el.action.params?.linkWidget?.url || el.action.params?.url || '';
+        const proto = el.action.params?.linkWidget?.protocol || '';
+        if (proto && !u.startsWith('http://') && !u.startsWith('https://')) {
+          u = `${proto}${u}`;
+        }
+        u = u.replace(/&amp;/g, '&');
+        if (u) canvaUrl = u;
+      }
+    });
+  });
 
   return (
     <div className="no-print bg-white/95 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-20">
@@ -63,77 +63,35 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               {title}
             </h2>
             <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500">
-              <span>{pkg.mainLibrary.replace('H5P.', '')}</span>
-              {slideCount !== undefined && <span>• {slideCount} slides</span>}
+              {slideCount !== undefined && <span>{slideCount} slides</span>}
               <span>• {(pkg.fileSize / 1024 / 1024).toFixed(1)} MB</span>
             </div>
           </div>
         </div>
 
-        {/* Studio Controls */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* View Mode Toggle */}
-          <div className="inline-flex rounded-lg bg-zinc-100 p-0.5 border border-zinc-200/80 text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => onViewModeChange('slides')}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                viewMode === 'slides'
-                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {/* Prominent Canva Link if detected */}
+          {canvaUrl && (
+            <a
+              href={canvaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold shadow-2xs transition-colors"
+              title="Open full presentation directly in Canva"
             >
-              16:9 Slides
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange('document')}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                viewMode === 'document'
-                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-            >
-              Reading Doc
-            </button>
-          </div>
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>View in Canva</span>
+            </a>
+          )}
 
-          {/* Quiz Mode Toggle */}
-          <div className="inline-flex rounded-lg bg-zinc-100 p-0.5 border border-zinc-200/80 text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => onQuizModeChange('study')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-all ${
-                quizMode === 'study'
-                  ? 'bg-emerald-600 text-white shadow-2xs font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-              title="Reveal correct answers and solutions for study"
-            >
-              {quizMode === 'study' && <Check className="w-3 h-3" />}
-              <span>Study Guide</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onQuizModeChange('worksheet')}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                quizMode === 'worksheet'
-                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-              title="Blank out question solutions for self-testing"
-            >
-              Worksheet
-            </button>
-          </div>
-
-          {/* Direct High-Resolution 1080p PDF Exporter */}
+          {/* SINGLE Primary Download PDF Button */}
           <button
             type="button"
             onClick={handleDownloadPdf}
             disabled={isExporting}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-            title="Download full-bleed 1080p PDF without browser print dialog"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
+            title="Download full 1080p PDF"
           >
             {isExporting ? (
               <>
@@ -148,22 +106,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             )}
           </button>
 
-          {/* Native Print Dialog Option */}
-          <button
-            type="button"
-            onClick={handleNativePrint}
-            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
-            title="Open browser print dialog"
-          >
-            <Printer className="w-4 h-4" />
-          </button>
-
-          {/* Reset / Upload Another */}
+          {/* Change File Button */}
           <button
             type="button"
             onClick={onReset}
             className="p-1.5 rounded-lg border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
-            title="Load another package"
+            title="Open another file"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

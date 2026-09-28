@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { H5PPackage, QuizMode, ViewMode } from './types/h5p';
+import { H5PPackage } from './types/h5p';
 import { parseH5PFile, fetchH5PFromUrl, revokeAssets } from './lib/h5pParser';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
@@ -10,13 +10,6 @@ export const App: React.FC = () => {
   const [pkg, setPkg] = useState<H5PPackage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('slides');
-  const [quizMode, setQuizMode] = useState<QuizMode>('study');
-
-  // Keep body data attribute in sync for print styling
-  useEffect(() => {
-    document.body.setAttribute('data-view-mode', viewMode);
-  }, [viewMode]);
 
   const handleFileLoaded = async (file: File | Blob, customName?: string) => {
     try {
@@ -56,7 +49,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Support ?url= or ?h5p= in query string (e.g. from bookmarklet or external link)
+  // Support ?url= or ?h5p= in query string
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlParam = params.get('url') || params.get('h5p');
@@ -89,16 +82,10 @@ export const App: React.FC = () => {
           <div>
             <Toolbar
               pkg={pkg}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              quizMode={quizMode}
-              onQuizModeChange={setQuizMode}
               onReset={handleReset}
             />
             <DocumentViewer
               pkg={pkg}
-              viewMode={viewMode}
-              quizMode={quizMode}
             />
           </div>
         )}

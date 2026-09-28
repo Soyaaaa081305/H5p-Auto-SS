@@ -1,5 +1,5 @@
 import React from 'react';
-import { InteractiveBookContent, QuizMode } from '../../types/h5p';
+import { InteractiveBookContent } from '../../types/h5p';
 import { resolveAsset } from '../../lib/h5pParser';
 import { ElementDispatcher } from './ElementDispatcher';
 import { BookOpen } from 'lucide-react';
@@ -7,13 +7,11 @@ import { BookOpen } from 'lucide-react';
 interface InteractiveBookRendererProps {
   content: InteractiveBookContent;
   assetMap: Map<string, string>;
-  quizMode: QuizMode;
 }
 
 export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = ({
   content,
   assetMap,
-  quizMode,
 }) => {
   const chapters = content.chapters || [];
   const coverImage = content.bookCover?.coverMedium?.params?.file?.path;
@@ -71,7 +69,6 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
                         params: subContent.params || subContent,
                       }}
                       assetMap={assetMap}
-                      quizMode={quizMode}
                       inOverlay={false}
                     />
                   </div>
