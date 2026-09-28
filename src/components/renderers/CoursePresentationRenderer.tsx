@@ -57,7 +57,6 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
               {/* Screen Topbar (Hidden in Print) */}
               <div className="px-5 py-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between text-xs font-mono text-zinc-500 print:hidden">
                 <span className="font-medium text-zinc-800">Slide {slideIdx + 1} / {slides.length}</span>
-                {bgImgPath && <span className="text-zinc-400 text-[11px]">1920 × 1080 (16:9)</span>}
               </div>
 
               {/* Slide Canvas */}
