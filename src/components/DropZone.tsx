@@ -2,16 +2,18 @@ import React, { useRef, useState } from 'react';
 import { Loader2, Plus, FileCode2, Link as LinkIcon, ArrowRight } from 'lucide-react';
 
 interface DropZoneProps {
-  onFileLoaded: (file: File | Blob, customName?: string) => Promise<void>;
+  onFilesLoaded: (files: File[]) => Promise<void>;
   onUrlLoaded: (url: string) => Promise<void>;
   isLoading: boolean;
+  loadingMessage?: string;
   error: string | null;
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
-  onFileLoaded,
+  onFilesLoaded,
   onUrlLoaded,
   isLoading,
+  loadingMessage,
   error,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,13 +35,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFileLoaded(e.dataTransfer.files[0]);
+      onFilesLoaded(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileLoaded(e.target.files[0]);
+      onFilesLoaded(Array.from(e.target.files));
     }
   };
 
@@ -53,35 +55,35 @@ export const DropZone: React.FC<DropZoneProps> = ({
     <div className="no-print max-w-2xl mx-auto px-4 py-16 sm:py-20">
       {/* Title & Microcopy */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 font-sans">
           H5P to PDF Viewer
         </h2>
-        <p className="mt-2 text-sm text-zinc-500 font-normal">
-          Direct 1080p slide presentation viewer, PDF export, and study notes.
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 font-normal">
+          Direct 1080p slide presentation viewer, multi-module playlist, PDF export, and study notes.
         </p>
       </div>
 
       {/* Segmented Control Tabs */}
       <div className="flex justify-center mb-6">
-        <div className="inline-flex rounded-lg bg-zinc-200/70 p-1 border border-zinc-200 text-xs font-medium">
+        <div className="inline-flex rounded-lg bg-zinc-200/70 dark:bg-zinc-800 p-1 border border-zinc-200 dark:border-zinc-700 text-xs font-medium">
           <button
             type="button"
             onClick={() => setTab('file')}
             className={`px-4 py-1.5 rounded-md transition-all ${
               tab === 'file'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs font-semibold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
-            Upload .h5p File
+            Upload .h5p File(s)
           </button>
           <button
             type="button"
             onClick={() => setTab('url')}
             className={`px-4 py-1.5 rounded-md transition-all ${
               tab === 'url'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs font-semibold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
             Import via Link
@@ -98,42 +100,43 @@ export const DropZone: React.FC<DropZoneProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className={`relative rounded-2xl border transition-all duration-150 p-12 text-center cursor-pointer ${
             isDragging
-              ? 'border-zinc-900 bg-zinc-100 ring-4 ring-zinc-900/5'
-              : 'border-zinc-300/80 bg-white hover:border-zinc-400 hover:bg-zinc-50/60 shadow-xs'
+              ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-100 dark:bg-zinc-800/80 ring-4 ring-zinc-900/5 dark:ring-zinc-100/10'
+              : 'border-zinc-300/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-zinc-400 dark:hover:border-zinc-700 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 shadow-xs'
           }`}
         >
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept=".h5p,.zip"
             className="hidden"
             onChange={handleFileChange}
           />
 
           <div className="flex flex-col items-center justify-center">
-            <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200/80 text-zinc-700 flex items-center justify-center mb-4 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center mb-4 transition-transform">
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-zinc-900" />
+                <Loader2 className="w-5 h-5 animate-spin text-zinc-900 dark:text-zinc-100" />
               ) : (
-                <Plus className="w-5 h-5 text-zinc-800" />
+                <Plus className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />
               )}
             </div>
 
-            <p className="text-sm font-medium text-zinc-900">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
               {isLoading
-                ? 'Parsing package structure & extracting slides...'
-                : 'Drop an .h5p package here, or click to browse'}
+                ? loadingMessage || 'Parsing package structure & extracting slides...'
+                : 'Drop one or multiple .h5p packages here, or click to browse'}
             </p>
-            <p className="text-xs text-zinc-400 mt-1 font-mono">
-              Accepts standard LMS export archives (.h5p, .zip)
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-mono">
+              Accepts single or multiple modules (.h5p, .zip) for playlist & batch export
             </p>
 
             <button
               type="button"
-              className="mt-6 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-xs transition-colors pointer-events-none inline-flex items-center gap-1.5"
+              className="mt-6 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white font-medium text-xs shadow-xs transition-colors pointer-events-none inline-flex items-center gap-1.5"
             >
               <FileCode2 className="w-3.5 h-3.5" />
-              <span>Select File</span>
+              <span>Select File(s)</span>
             </button>
           </div>
         </div>
@@ -141,10 +144,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
       {/* Tab 2: URL Link Importer */}
       {tab === 'url' && (
-        <div className="bg-white rounded-2xl border border-zinc-300/80 p-6 sm:p-8 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 p-6 sm:p-8 shadow-xs">
           <form onSubmit={handleUrlSubmit} className="space-y-4">
             <div>
-              <label htmlFor="h5p-url" className="block text-xs font-semibold text-zinc-800 mb-2 font-mono">
+              <label htmlFor="h5p-url" className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-2 font-mono">
                 Enter .h5p File URL or Link:
               </label>
               <div className="flex gap-2">
@@ -159,13 +162,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     value={inputUrl}
                     onChange={(e) => setInputUrl(e.target.value)}
                     placeholder="https://.../module.h5p"
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent font-mono bg-zinc-50"
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 focus:border-transparent font-mono bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0"
+                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs font-medium shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0"
                 >
                   {isLoading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -184,13 +187,13 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
       {/* Error notification if any */}
       {error && (
-        <div className="mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-mono leading-relaxed">
+        <div className="mt-4 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-mono leading-relaxed">
           {error}
         </div>
       )}
 
       {/* Technical Footnote */}
-      <div className="mt-8 text-center text-xs text-zinc-400 font-mono">
+      <div className="mt-8 text-center text-xs text-zinc-400 dark:text-zinc-500 font-mono">
         All media and slides are processed in-memory directly on your device.
       </div>
     </div>

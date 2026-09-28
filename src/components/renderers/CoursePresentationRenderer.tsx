@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CoursePresentationContent, H5PSlide } from '../../types/h5p';
 import { resolveAsset } from '../../lib/h5pParser';
 import { ElementDispatcher } from './ElementDispatcher';
+import { copySlideImageToClipboard, downloadSlideAsPng } from '../../lib/pdfExporter';
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,6 +10,9 @@ import {
   Minimize2,
   LayoutList,
   Monitor,
+  Copy,
+  Download,
+  Check,
 } from 'lucide-react';
 
 interface CoursePresentationRendererProps {
@@ -24,7 +28,26 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
   const [viewMode, setViewMode] = useState<'scroll' | 'presentation'>('scroll');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [copiedSlideIdx, setCopiedSlideIdx] = useState<number | null>(null);
   const presentationRef = useRef<HTMLDivElement>(null);
+
+  const handleCopySlide = async (slide: H5PSlide, slideIdx: number) => {
+    try {
+      await copySlideImageToClipboard(slide, slideIdx, assetMap);
+      setCopiedSlideIdx(slideIdx);
+      setTimeout(() => setCopiedSlideIdx(null), 2000);
+    } catch (e: any) {
+      alert(e?.message || 'Failed to copy slide image to clipboard.');
+    }
+  };
+
+  const handleDownloadSlide = async (slide: H5PSlide, slideIdx: number) => {
+    try {
+      await downloadSlideAsPng(slide, slideIdx, assetMap, 'slide');
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save slide PNG.');
+    }
+  };
 
   // Fullscreen toggle handler
   const toggleFullscreen = () => {
@@ -169,14 +192,14 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Top View Mode Switcher & Controls */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="inline-flex rounded-lg bg-zinc-200/70 p-1 border border-zinc-200 text-xs font-medium">
+        <div className="inline-flex rounded-lg bg-zinc-200/70 dark:bg-zinc-800 p-1 border border-zinc-200 dark:border-zinc-700 text-xs font-medium">
           <button
             type="button"
             onClick={() => setViewMode('scroll')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
               viewMode === 'scroll'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs font-semibold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
             <LayoutList className="w-3.5 h-3.5" />
@@ -187,8 +210,8 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
             onClick={() => setViewMode('presentation')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
               viewMode === 'presentation'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs font-semibold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
             <Monitor className="w-3.5 h-3.5" />
@@ -199,7 +222,7 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
         {/* Presentation Controls if active */}
         {viewMode === 'presentation' && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-500 mr-2">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mr-2">
               Slide {currentSlideIndex + 1} of {slides.length}
             </span>
 
@@ -207,7 +230,7 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
               type="button"
               disabled={currentSlideIndex === 0}
               onClick={() => setCurrentSlideIndex((prev) => Math.max(0, prev - 1))}
-              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors"
               title="Previous Slide (Arrow Left)"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -217,7 +240,7 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
               type="button"
               disabled={currentSlideIndex === slides.length - 1}
               onClick={() => setCurrentSlideIndex((prev) => Math.min(slides.length - 1, prev + 1))}
-              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors"
               title="Next Slide (Arrow Right / Space)"
             >
               <ChevronRight className="w-4 h-4" />
@@ -226,7 +249,7 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               title="Toggle Fullscreen (F)"
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -243,15 +266,41 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
             isFullscreen ? 'bg-black flex flex-col justify-center items-center h-screen w-screen p-4' : ''
           }`}
         >
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-200/90 overflow-hidden w-full max-w-5xl mx-auto">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200/90 dark:border-zinc-800 overflow-hidden w-full max-w-5xl mx-auto">
             {!isFullscreen && (
-              <div className="px-5 py-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between text-xs font-mono text-zinc-500">
-                <span className="font-medium text-zinc-800">
+              <div className="px-5 py-2.5 bg-zinc-50 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-700/80 flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">
                   Slide {currentSlideIndex + 1} / {slides.length}
                 </span>
-                <span className="text-[11px] text-zinc-400">
-                  Press ← / → or Space to navigate · 'F' for Fullscreen
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopySlide(slides[currentSlideIndex], currentSlideIndex)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-colors"
+                    title="Copy 1080p slide image to clipboard for Notion/Docs"
+                  >
+                    {copiedSlideIdx === currentSlideIndex ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Image</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadSlide(slides[currentSlideIndex], currentSlideIndex)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-colors"
+                    title="Download 1080p slide PNG"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Save PNG</span>
+                  </button>
+                </div>
               </div>
             )}
             {renderSlideInner(slides[currentSlideIndex], currentSlideIndex)}
@@ -271,15 +320,15 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
                   onClick={() => setCurrentSlideIndex(idx)}
                   className={`flex-shrink-0 w-24 aspect-[16/9] rounded-lg border overflow-hidden relative transition-all ${
                     isActive
-                      ? 'border-zinc-900 ring-2 ring-zinc-900/20 shadow-xs scale-105'
-                      : 'border-zinc-200 opacity-60 hover:opacity-100'
+                      ? 'border-zinc-900 dark:border-zinc-100 ring-2 ring-zinc-900/20 dark:ring-zinc-100/30 shadow-xs scale-105'
+                      : 'border-zinc-200 dark:border-zinc-800 opacity-60 hover:opacity-100'
                   }`}
                   title={`Jump to Slide ${idx + 1}`}
                 >
                   {sBgUrl ? (
                     <img src={sBgUrl} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-600">
+                    <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300">
                       Quiz
                     </div>
                   )}
@@ -298,12 +347,41 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
         {slides.map((slide, slideIdx) => (
           <div
             key={slideIdx}
-            className="print-slide bg-white rounded-2xl shadow-xs border border-zinc-200/90 overflow-hidden transition-all print:shadow-none print:border-none print:rounded-none"
+            className="print-slide bg-white dark:bg-zinc-900 rounded-2xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden transition-all print:shadow-none print:border-none print:rounded-none"
           >
-            <div className="px-5 py-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between text-xs font-mono text-zinc-500 print:hidden">
-              <span className="font-medium text-zinc-800">
+            <div className="px-5 py-2.5 bg-zinc-50 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-700/80 flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 print:hidden">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 Slide {slideIdx + 1} / {slides.length}
               </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopySlide(slide, slideIdx)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-colors"
+                  title="Copy 1080p slide image to clipboard for Notion/Docs"
+                >
+                  {copiedSlideIdx === slideIdx ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Image</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSlide(slide, slideIdx)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-colors"
+                  title="Download 1080p slide PNG"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Save PNG</span>
+                </button>
+              </div>
             </div>
             {renderSlideInner(slide, slideIdx)}
           </div>

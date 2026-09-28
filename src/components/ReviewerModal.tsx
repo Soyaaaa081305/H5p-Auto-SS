@@ -214,23 +214,23 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
       }}
     >
       <div
-        className="bg-white rounded-2xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden relative z-[10000] print:max-h-none print:shadow-none print:border-none my-auto"
+        className="bg-white dark:bg-zinc-900 rounded-2xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative z-[10000] print:max-h-none print:shadow-none print:border-none my-auto transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="no-print px-6 py-4 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 bg-zinc-50 flex-shrink-0">
+        <div className="no-print px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-850/90 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-200 text-emerald-800 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-zinc-900 font-sans flex items-center gap-2">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-sans flex items-center gap-2">
                 <span>Exam Reviewer & Answer Key</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-semibold">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-semibold">
                   {questions.length} Questions
                 </span>
               </h3>
-              <p className="text-xs text-zinc-500 font-normal">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                 Course questions & verified answers from {pkg.metadata.title || pkg.fileName}
               </p>
             </div>
@@ -240,11 +240,11 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
             <button
               type="button"
               onClick={handleCopyForAnki}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs font-semibold shadow-xs transition-colors"
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
                   <span>Copied for Anki/Notion!</span>
                 </>
               ) : (
@@ -258,7 +258,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               title="Close (Esc)"
             >
               <X className="w-4 h-4" />
@@ -269,39 +269,39 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
         {/* Modal Body / Questions List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {questions.length === 0 ? (
-            <div className="text-center py-16 text-zinc-400 font-mono text-xs">
+            <div className="text-center py-16 text-zinc-400 dark:text-zinc-500 font-mono text-xs">
               No interactive quiz questions found in this module.
             </div>
           ) : (
             questions.map((q, idx) => (
               <div
                 key={q.id}
-                className="p-4 sm:p-5 rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 transition-colors shadow-2xs space-y-2.5"
+                className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors shadow-2xs space-y-2.5"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
                       Question {idx + 1}
                     </span>
-                    <span className="text-[11px] font-mono text-zinc-400">
+                    <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
                       {q.promptTitle}
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400">
+                  <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
                     Slide {q.slideNumber}
                   </span>
                 </div>
 
                 {/* Question Prompt */}
-                <p className="text-sm font-medium text-zinc-800 leading-relaxed">
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 leading-relaxed">
                   {q.question}
                 </p>
 
                 {/* Correct Statement / Answer */}
-                <div className="p-3 rounded-lg bg-emerald-50/90 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-950 font-medium">
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div className="p-3 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-start gap-2.5 text-xs text-emerald-950 dark:text-emerald-200 font-medium">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <span className="font-bold text-emerald-800 font-mono text-[11px] block mb-0.5">
+                    <span className="font-bold text-emerald-800 dark:text-emerald-400 font-mono text-[11px] block mb-0.5">
                       ✓ CORRECT STATEMENT / ANSWER:
                     </span>
                     <span className="leading-relaxed">{q.correctAnswer}</span>
@@ -314,9 +314,9 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
                     {q.distractors.map((dist, dIdx) => (
                       <div
                         key={dIdx}
-                        className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200/80 text-xs text-zinc-500 flex items-start gap-2"
+                        className="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/80 text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-2"
                       >
-                        <span className="text-zinc-400 font-bold flex-shrink-0 mt-0.5">✗</span>
+                        <span className="text-zinc-400 dark:text-zinc-500 font-bold flex-shrink-0 mt-0.5">✗</span>
                         <span className="leading-relaxed">{dist}</span>
                       </div>
                     ))}
@@ -328,7 +328,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
         </div>
 
         {/* Modal Footer */}
-        <div className="no-print px-6 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500 flex-shrink-0">
+        <div className="no-print px-6 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-850/90 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Ready for exam cramming, Anki flashcards, and quick revision.</span>
@@ -336,7 +336,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 font-medium text-xs shadow-2xs transition-colors"
+            className="px-4 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white font-medium text-xs shadow-2xs transition-colors"
           >
             Close
           </button>

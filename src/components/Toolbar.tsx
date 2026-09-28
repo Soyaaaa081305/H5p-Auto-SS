@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { H5PPackage } from '../types/h5p';
-import { exportSlidesToPdf } from '../lib/pdfExporter';
+import { exportSlidesToPdf, exportBatchToPdf } from '../lib/pdfExporter';
 import { ReviewerModal } from './ReviewerModal';
 import {
   Download,
@@ -8,23 +8,42 @@ import {
   Loader2,
   ExternalLink,
   BookOpen,
+  Plus,
+  X,
+  Layers,
 } from 'lucide-react';
 
 interface ToolbarProps {
-  pkg: H5PPackage;
-  onReset: () => void;
+  packages: H5PPackage[];
+  activePkgIndex: number;
+  onSelectPackage: (index: number) => void;
+  onRemovePackage: (index: number) => void;
+  onAddFiles: (files: File[]) => Promise<void>;
+  onResetAll: () => void;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
+export const Toolbar: React.FC<ToolbarProps> = ({
+  packages,
+  activePkgIndex,
+  onSelectPackage,
+  onRemovePackage,
+  onAddFiles,
+  onResetAll,
+}) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<string>('');
   const [showReviewer, setShowReviewer] = useState(false);
+  const addFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDownloadPdf = async () => {
+  const currentPkg = packages[activePkgIndex] || packages[0];
+  if (!currentPkg) return null;
+
+  // Single module export
+  const handleDownloadSinglePdf = async () => {
     try {
       setIsExporting(true);
       setExportProgress('Preparing slides...');
-      await exportSlidesToPdf(pkg, (curr, total) => {
+      await exportSlidesToPdf(currentPkg, (curr, total) => {
         setExportProgress(`Compiling ${curr}/${total}`);
       });
     } catch (err: any) {
@@ -36,12 +55,36 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
     }
   };
 
-  const title = pkg.metadata.title || pkg.fileName;
-  const slideCount = pkg.content?.presentation?.slides?.length;
+  // Batch merge all modules export
+  const handleDownloadBatchPdf = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgress('Merging all modules...');
+      await exportBatchToPdf(packages, (curr, total, modName) => {
+        setExportProgress(`Slide ${curr}/${total} (${modName.slice(0, 15)}...)`);
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to batch merge PDF: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
+    }
+  };
 
-  // Extract Canva / external presentation link
+  const handleAddFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onAddFiles(Array.from(e.target.files));
+      e.target.value = '';
+    }
+  };
+
+  const title = currentPkg.metadata.title || currentPkg.fileName;
+  const slideCount = currentPkg.content?.presentation?.slides?.length;
+
+  // Extract Canva / external presentation link from active module
   let canvaUrl: string | null = null;
-  const slides: any[] = pkg.content?.presentation?.slides || [];
+  const slides: any[] = currentPkg.content?.presentation?.slides || [];
   slides.forEach((s) => {
     (s.elements || []).forEach((el: any) => {
       if (el.action?.library?.includes('Link')) {
@@ -56,32 +99,131 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
     });
   });
 
+  // Calculate total slides across all packages
+  const totalBatchSlides = packages.reduce(
+    (sum, p) => sum + (p.content?.presentation?.slides?.length || 0),
+    0
+  );
+
   return (
-    <div className="no-print bg-white/95 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-20">
+    <div className="no-print bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20 transition-colors">
+      {/* Hidden file input for adding more modules */}
+      <input
+        ref={addFileInputRef}
+        type="file"
+        multiple
+        accept=".h5p,.zip"
+        className="hidden"
+        onChange={handleAddFileInputChange}
+      />
+
+      {/* Playlist Module Tabs Bar (shown when multiple modules exist, or if requested) */}
+      {packages.length > 1 && (
+        <div className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-950/40 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-zinc-500 dark:text-zinc-400 mr-2 flex-shrink-0">
+              <Layers className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Playlist ({packages.length}):</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-nowrap">
+              {packages.map((pkgItem, idx) => {
+                const isActive = idx === activePkgIndex;
+                const pTitle = pkgItem.metadata.title || pkgItem.fileName;
+                const pSlides = pkgItem.content?.presentation?.slides?.length || 0;
+
+                return (
+                  <div
+                    key={pkgItem.fileName + idx}
+                    className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all flex-shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold shadow-2xs'
+                        : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300'
+                    }`}
+                    onClick={() => onSelectPackage(idx)}
+                    title={pTitle}
+                  >
+                    <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                      {pTitle}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        isActive
+                          ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
+                          : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {pSlides}
+                    </span>
+                    {packages.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemovePackage(idx);
+                        }}
+                        className={`p-0.5 rounded hover:bg-rose-500 hover:text-white transition-colors ml-0.5 ${
+                          isActive
+                            ? 'text-zinc-400 dark:text-zinc-600'
+                            : 'text-zinc-400 dark:text-zinc-500'
+                        }`}
+                        title="Remove module from playlist"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Add Module Tab Button */}
+              <button
+                type="button"
+                onClick={() => addFileInputRef.current?.click()}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-500 text-xs font-medium flex-shrink-0 transition-colors"
+                title="Add another .h5p module to playlist"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add Module</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Action Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
         {/* Document Metadata */}
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-zinc-900 truncate max-w-xs sm:max-w-md font-sans" title={title}>
+            <h2
+              className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-xs sm:max-w-md font-sans"
+              title={title}
+            >
               {title}
             </h2>
-            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500">
+            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+              {packages.length > 1 && (
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                  Module {activePkgIndex + 1}/{packages.length}
+                </span>
+              )}
               {slideCount !== undefined && <span>{slideCount} slides</span>}
-              <span>• {(pkg.fileSize / 1024 / 1024).toFixed(1)} MB</span>
+              <span>• {(currentPkg.fileSize / 1024 / 1024).toFixed(1)} MB</span>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
           {/* Exam Reviewer & Answer Key Button */}
           <button
             type="button"
             onClick={() => setShowReviewer(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-xs font-semibold shadow-2xs transition-colors"
             title="Open Exam Reviewer & Answer Key"
           >
-            <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+            <BookOpen className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>Exam Reviewer</span>
           </button>
 
@@ -91,7 +233,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
               href={canvaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold shadow-2xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-xs font-semibold shadow-2xs transition-colors"
               title="Open full presentation directly in Canva"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -99,15 +241,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
             </a>
           )}
 
-          {/* SINGLE Primary Download PDF Button */}
+          {/* Batch Merge All Button (if more than 1 module) */}
+          {packages.length > 1 && (
+            <button
+              type="button"
+              onClick={handleDownloadBatchPdf}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
+              title={`Merge all ${packages.length} modules (${totalBatchSlides} total slides) into 1 PDF`}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>{exportProgress || 'Merging...'}</span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Merge All ({packages.length}) to 1 PDF</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Single Module PDF Download */}
           <button
             type="button"
-            onClick={handleDownloadPdf}
+            onClick={handleDownloadSinglePdf}
             disabled={isExporting}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-            title="Download full 1080p PDF"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
+            title={packages.length > 1 ? 'Download this current module PDF' : 'Download full 1080p PDF'}
           >
-            {isExporting ? (
+            {isExporting && packages.length === 1 ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>{exportProgress || 'Exporting...'}</span>
@@ -115,17 +280,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
             ) : (
               <>
                 <Download className="w-3.5 h-3.5" />
-                <span>Download PDF</span>
+                <span>{packages.length > 1 ? 'This Module PDF' : 'Download PDF'}</span>
               </>
             )}
           </button>
 
-          {/* Change File Button */}
+          {/* If single module, show "+ Add Module" to encourage playlist usage */}
+          {packages.length === 1 && (
+            <button
+              type="button"
+              onClick={() => addFileInputRef.current?.click()}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-medium shadow-2xs transition-colors"
+              title="Add another .h5p module to playlist"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add Module</span>
+            </button>
+          )}
+
+          {/* Reset / Clear All */}
           <button
             type="button"
-            onClick={onReset}
-            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
-            title="Open another file"
+            onClick={onResetAll}
+            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Close modules and upload another"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -133,7 +311,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
       </div>
 
       <ReviewerModal
-        pkg={pkg}
+        pkg={currentPkg}
         isOpen={showReviewer}
         onClose={() => setShowReviewer(false)}
       />

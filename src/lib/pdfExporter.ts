@@ -450,3 +450,82 @@ export async function exportSlidesToPdf(
 
   doc.save(cleanFilename);
 }
+
+export async function copySlideImageToClipboard(
+  slide: any,
+  slideIndex: number,
+  assetMap: Map<string, string>
+): Promise<void> {
+  const canvas = await renderSlideToCanvas(slide, slideIndex, assetMap);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Failed to generate slide image.');
+
+  if (!navigator.clipboard?.write) {
+    throw new Error('Clipboard API not supported in this browser.');
+  }
+
+  await navigator.clipboard.write([
+    new ClipboardItem({ 'image/png': blob })
+  ]);
+}
+
+export async function downloadSlideAsPng(
+  slide: any,
+  slideIndex: number,
+  assetMap: Map<string, string>,
+  prefixName?: string
+): Promise<void> {
+  const canvas = await renderSlideToCanvas(slide, slideIndex, assetMap);
+  const dataUrl = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  const cleanPrefix = (prefixName || 'slide').replace(/[^a-zA-Z0-9_\- ]/g, '').trim();
+  a.download = `${cleanPrefix}-slide-${slideIndex + 1}.png`;
+  a.click();
+}
+
+export async function exportBatchToPdf(
+  packages: H5PPackage[],
+  onProgress?: (current: number, total: number, moduleName: string) => void
+): Promise<void> {
+  if (packages.length === 0) throw new Error('No packages to export');
+
+  let totalSlides = 0;
+  packages.forEach((p) => {
+    totalSlides += p.content?.presentation?.slides?.length || 0;
+  });
+
+  if (totalSlides === 0) throw new Error('No slides found across modules.');
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'px',
+    format: [1920, 1080],
+    hotfixes: ['px_scaling'],
+  });
+
+  let globalSlideCount = 0;
+
+  for (let pIdx = 0; pIdx < packages.length; pIdx++) {
+    const pkg = packages[pIdx];
+    const slides: any[] = pkg.content?.presentation?.slides || [];
+    const pkgTitle = pkg.metadata.title || pkg.fileName;
+
+    for (let sIdx = 0; sIdx < slides.length; sIdx++) {
+      globalSlideCount++;
+      if (onProgress) {
+        onProgress(globalSlideCount, totalSlides, pkgTitle);
+      }
+
+      if (globalSlideCount > 1) {
+        doc.addPage([1920, 1080], 'landscape');
+      }
+
+      const canvas = await renderSlideToCanvas(slides[sIdx], sIdx, pkg.assetMap);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+    }
+  }
+
+  doc.save('Course_All_Modules_Bundle.pdf');
+}
