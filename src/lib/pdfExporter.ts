@@ -239,6 +239,127 @@ function renderSummaryOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   });
 }
 
+function renderMultiChoiceOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const question = cleanHtml(params.question || params.text || 'Multiple Choice Question');
+  const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(80, 60, 1760, 960);
+  ctx.strokeRect(80, 60, 1760, 960);
+
+  // Header
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Quiz: Multiple Choice', 130, 130);
+
+  // Divider
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(130, 155);
+  ctx.lineTo(1790, 155);
+  ctx.stroke();
+
+  // Question Prompt
+  ctx.fillStyle = '#1e293b';
+  ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  wrapText(ctx, question, 130, 205, 1660, 32);
+
+  // Answers list
+  let curY = 320;
+  const optHeight = 75;
+  const optWidth = 1660;
+
+  answers.forEach((ans) => {
+    const isCorrect = Boolean(ans.correct);
+    const ansText = cleanHtml(ans.text || '');
+
+    ctx.fillStyle = isCorrect ? '#ecfdf5' : '#f8fafc';
+    ctx.fillRect(130, curY, optWidth, optHeight);
+    ctx.strokeStyle = isCorrect ? '#10b981' : '#e2e8f0';
+    ctx.lineWidth = isCorrect ? 2 : 1.5;
+    ctx.strokeRect(130, curY, optWidth, optHeight);
+
+    if (isCorrect) {
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('✓ [CORRECT ANSWER]', 155, curY + 45);
+    } else {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('○', 155, curY + 45);
+    }
+
+    ctx.fillStyle = isCorrect ? '#065f46' : '#334155';
+    ctx.font = isCorrect
+      ? 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      : '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wrapText(ctx, ansText, 440, curY + 45, optWidth - 470, 24);
+
+    curY += optHeight + 20;
+  });
+}
+
+function renderTrueFalseOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const question = cleanHtml(params.question || '');
+  const isTrueCorrect = String(params.correct).toLowerCase() === 'true';
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(80, 60, 1760, 960);
+  ctx.strokeRect(80, 60, 1760, 960);
+
+  // Header
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Quiz: True or False', 130, 130);
+
+  // Divider
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(130, 155);
+  ctx.lineTo(1790, 155);
+  ctx.stroke();
+
+  // Question Prompt
+  ctx.fillStyle = '#1e293b';
+  ctx.font = '600 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  wrapText(ctx, question, 130, 230, 1660, 36);
+
+  // True & False options
+  const options = [
+    { label: 'True', isCorrect: isTrueCorrect },
+    { label: 'False', isCorrect: !isTrueCorrect },
+  ];
+
+  options.forEach((opt, idx) => {
+    const cardY = 380 + idx * 110;
+    const isCor = opt.isCorrect;
+
+    ctx.fillStyle = isCor ? '#ecfdf5' : '#f8fafc';
+    ctx.fillRect(130, cardY, 800, 85);
+    ctx.strokeStyle = isCor ? '#10b981' : '#e2e8f0';
+    ctx.lineWidth = isCor ? 2 : 1.5;
+    ctx.strokeRect(130, cardY, 800, 85);
+
+    ctx.fillStyle = isCor ? '#059669' : '#94a3b8';
+    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(isCor ? `✓ ${opt.label} [Correct Answer]` : `○ ${opt.label}`, 160, cardY + 50);
+  });
+}
+
 async function renderSlideToCanvas(
   slide: any,
   slideIndex: number,
@@ -281,6 +402,10 @@ async function renderSlideToCanvas(
       renderBlanksOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.Summary')) {
       renderSummaryOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.MultiChoice') || library.startsWith('H5P.SingleChoiceSet')) {
+      renderMultiChoiceOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.TrueFalse')) {
+      renderTrueFalseOnCanvas(ctx, params);
     }
   }
 

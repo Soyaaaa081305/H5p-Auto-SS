@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { H5PPackage } from '../types/h5p';
 import { exportSlidesToPdf } from '../lib/pdfExporter';
+import { ReviewerModal } from './ReviewerModal';
 import {
   Download,
   RotateCcw,
   Loader2,
   ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -16,6 +18,7 @@ interface ToolbarProps {
 export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<string>('');
+  const [showReviewer, setShowReviewer] = useState(false);
 
   const handleDownloadPdf = async () => {
     try {
@@ -70,7 +73,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Exam Reviewer & Answer Key Button */}
+          <button
+            type="button"
+            onClick={() => setShowReviewer(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold shadow-2xs transition-colors"
+            title="Open Exam Reviewer & Answer Key"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Exam Reviewer</span>
+          </button>
+
           {/* Prominent Canva Link if detected */}
           {canvaUrl && (
             <a
@@ -90,7 +104,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
             type="button"
             onClick={handleDownloadPdf}
             disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
             title="Download full 1080p PDF"
           >
             {isExporting ? (
@@ -117,6 +131,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ pkg, onReset }) => {
           </button>
         </div>
       </div>
+
+      <ReviewerModal
+        pkg={pkg}
+        isOpen={showReviewer}
+        onClose={() => setShowReviewer(false)}
+      />
     </div>
   );
 };
