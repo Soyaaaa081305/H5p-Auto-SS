@@ -25,7 +25,6 @@ export function SafeMedia({
   alt?: string;
   title?: string;
 }) {
-  const [allowed, setAllowed] = useState<string>();
   const [loadError, setLoadError] = useState(false);
   const local = resolveAsset(path, assetMap);
 
@@ -42,71 +41,8 @@ export function SafeMedia({
     }
   }
 
-  const remote = externalUrl(cleanPath);
-
-  // Privacy boundary: Require user opt-in before connecting to third-party hosts
-  if (!local && remote && allowed !== remote) {
-    let hostname = "external provider";
-    try {
-      hostname = new URL(remote).hostname;
-    } catch {
-      // fallback
-    }
-    const ytId = extractYouTubeId(remote);
-    const directWatchUrl = ytId ? `https://www.youtube.com/watch?v=${ytId}` : remote;
-
-    return (
-      <div className="p-4 my-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-850/60 text-sm space-y-2.5">
-        <p className="text-zinc-700 dark:text-zinc-300">
-          External {kind} from {hostname}. Loading it sends a request to that host.
-        </p>
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <button
-            className="underline font-semibold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
-            onClick={() => setAllowed(remote)}
-          >
-            Load external {kind}
-          </button>
-          {ytId && (
-            <a
-              href={directWatchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
-              title="Open video directly on YouTube in a new tab"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Watch on YouTube ↗</span>
-            </a>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const src = local || (allowed === remote ? remote : undefined);
-
-  if (!src) {
-    return (
-      <div className="p-3 my-2 rounded-xl bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between gap-2">
-        <span>Media unavailable. Verified study notes & answers remain accessible below.</span>
-        {path && /^https?:\/\//i.test(path) && (
-          <a
-            href={path}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 underline font-medium"
-          >
-            <span>Open Link</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
-      </div>
-    );
-  }
-
-  // 1. YouTube Video handling (supports all standard YouTube URLs)
-  const ytId = extractYouTubeId(src);
+  // 1. YouTube Video handling (defaults directly to player + "Watch on YouTube" button)
+  const ytId = extractYouTubeId(cleanPath);
   if (ytId) {
     const embedUrl = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0&enablejsapi=1`;
     const directWatchUrl = `https://www.youtube.com/watch?v=${ytId}`;
@@ -124,7 +60,7 @@ export function SafeMedia({
           />
         </div>
 
-        {/* Action bar with direct YouTube link & helper info */}
+        {/* Action bar with direct YouTube link */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-sans">
             <Video className="w-3.5 h-3.5 text-red-500" />
@@ -137,7 +73,7 @@ export function SafeMedia({
             href={directWatchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
             title="Open video directly on YouTube in a new tab"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -157,6 +93,28 @@ export function SafeMedia({
               Open on YouTube
             </a>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  const remote = externalUrl(cleanPath);
+  const src = local || remote;
+
+  if (!src) {
+    return (
+      <div className="p-3 my-2 rounded-xl bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between gap-2">
+        <span>Media unavailable. Verified study notes & answers remain accessible below.</span>
+        {path && /^https?:\/\//i.test(path) && (
+          <a
+            href={path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 underline font-medium"
+          >
+            <span>Open Link</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
         )}
       </div>
     );

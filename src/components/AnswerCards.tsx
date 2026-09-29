@@ -27,14 +27,20 @@ export function AnswerCards({
           >
             {statusLabel[answer.status]}
           </span>
-          {answer.parts.map((part, i) => (
-            <div
-              key={i}
-              className="mt-2 rounded-lg p-3 bg-emerald-50 dark:bg-emerald-950/40 text-sm"
-            >
-              <span className="font-medium">{part.label}: </span>
-              {part.values.join(" / ") ||
-                (!part.images?.length ? "No stored answer" : "")}
+          {answer.parts.map((part, i) => {
+            const hasContent = part.values.length > 0 || (part.images && part.images.length > 0);
+            return (
+              <div
+                key={i}
+                className={`mt-2 rounded-lg p-3 text-sm ${
+                  hasContent
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                }`}
+              >
+                <span className="font-medium">{part.label}: </span>
+                {part.values.join(" / ") ||
+                  (!part.images?.length ? "No statement or question authored in module" : "")}
               {part.target && (
                 <span className="block text-xs text-zinc-500">
                   Position: {part.target.x.toFixed(1)}% across,{" "}
@@ -50,7 +56,8 @@ export function AnswerCards({
                 />
               ))}
             </div>
-          ))}
+            );
+          })}
           {answer.explanation && (
             <p className="mt-2 text-sm text-zinc-500">{answer.explanation}</p>
           )}

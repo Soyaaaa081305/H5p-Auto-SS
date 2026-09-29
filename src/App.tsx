@@ -27,6 +27,18 @@ export default function App() {
     },
     [],
   );
+
+  // Warn user before leaving or refreshing the site if H5P packages are active
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (packages.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [packages.length]);
   async function importFiles(files: File[], url?: string) {
     if (controller.current || (!files.length && !url)) return;
     const importGeneration = generation.current;

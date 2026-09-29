@@ -134,16 +134,63 @@ const adapters: Record<string, Adapter> = {
         },
       ],
     })),
-  "H5P.Summary": (p) =>
-    list(p.summaries).map((s) => ({
-      prompt: plainText(p.intro) || "Choose the correct statement",
-      parts: [
+  "H5P.Summary": (p) => {
+    const rawSummaries = list(p.summaries || p.summary || p.statements);
+    const intro = plainText(p.intro || p.question || p.taskDescription) || "Choose the correct statement";
+
+    if (!rawSummaries.length) {
+      return [
         {
-          label: "Correct statement",
-          values: [plainText(list(s?.summary)[0])].filter(Boolean),
+          prompt: intro,
+          parts: [{ label: "Correct statement", values: [] }],
+          explanation:
+            "This summary question was left blank by the author (no statements were created in this module).",
         },
-      ],
-    })),
+      ];
+    }
+
+    return rawSummaries.map((s) => {
+      let stList: any[] = [];
+      if (Array.isArray(s)) {
+        stList = s;
+      } else if (record(s)) {
+        stList = list(s.summary || s.statements || s.options || s.answers || s.choices);
+        if (!stList.length) {
+          const single = s.statement || s.text || s.label;
+          if (single) stList = [single];
+        }
+      } else if (typeof s === "string") {
+        stList = [s];
+      }
+
+      let correctVal = "";
+      if (stList.length > 0) {
+        const first = stList[0];
+        if (typeof first === "string") {
+          correctVal = plainText(first);
+        } else if (record(first)) {
+          correctVal = plainText(
+            first.text || first.statement || first.label || first.summary || first.answer,
+          );
+        }
+      }
+
+      const prompt = (record(s) && plainText(s.tip || s.intro || s.question)) || intro;
+
+      return {
+        prompt,
+        parts: [
+          {
+            label: "Correct statement",
+            values: correctVal ? [correctVal] : [],
+          },
+        ],
+        explanation: !correctVal
+          ? "This summary question was left blank by the author (no statements were created in this module)."
+          : undefined,
+      };
+    });
+  },
   "H5P.DragQuestion": (p) => {
     const task = p.question?.task;
     const elements = list(task?.elements);
@@ -240,11 +287,12 @@ export function extractNode(node: ContentNode, packageName = ""): AnswerItem[] {
       ...d,
       status,
       explanation:
-        status === "missing"
+        d.explanation ||
+        (status === "missing"
           ? "No usable answer key is stored in the expected fields."
           : status === "partial"
             ? "Some answer parts are missing or malformed."
-            : undefined,
+            : undefined),
     };
   });
 }

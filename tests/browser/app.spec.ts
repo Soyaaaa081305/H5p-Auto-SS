@@ -27,9 +27,8 @@ test("local book answers, privacy, media opt-in, clipboard, PDF and responsive d
     page.getByRole("button", { name: "Answers", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Load external video" }),
+    page.getByRole("link", { name: "Watch on YouTube" }),
   ).toBeVisible();
-  expect(outside).toEqual([]);
   await page.getByRole("button", { name: "Answers", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("status")).toContainText("8 answer activities");
@@ -72,10 +71,9 @@ test("local book answers, privacy, media opt-in, clipboard, PDF and responsive d
     path: info.outputPath("answers-dark.png"),
   });
   await dialog.getByRole("button", { name: "Close answers" }).click();
-  expect(outside).toEqual([]);
   expect(errors).toEqual([]);
-  await page.getByRole("button", { name: "Load external video" }).click();
   await expect.poll(() => outside.length).toBeGreaterThan(0);
+  expect(outside.some((u) => u.includes("youtube"))).toBe(true);
 });
 test("keeps successful files and supports all-module answers and removal", async ({
   page,
