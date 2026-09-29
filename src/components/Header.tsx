@@ -10,7 +10,7 @@ export const Header: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   // Resilient Bookmarklet: auto-clicks H5P reuse/download, resolves H5PIntegration export URLs,
-  // handles Blackboard cross-origin frames, and provides clean on-screen toast feedback
+  // excludes Blackboard system iframes (like MS Teams API), and guides students to the LTI tab
   const bookmarkletCode =
     "javascript:(function(){" +
     "function n(t,m,u,l){" +
@@ -19,7 +19,13 @@ export const Header: React.FC = () => {
     "b.style.cssText='position:fixed;top:20px;right:20px;z-index:9999999;background:#18181b;color:#fafafa;padding:16px;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.35);max-width:380px;border:1px solid #3f3f46;line-height:1.4;';" +
     "b.innerHTML='<div style=\"font-weight:700;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;\"><span>'+t+'</span><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;\">&times;</button></div><p style=\"font-size:12px;color:#d4d4d8;margin:0 0 10px 0;\">'+m+'</p>'+(u?'<div style=\"display:flex;gap:8px;\"><a href=\"'+u+'\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background:#4f46e5;color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;\">'+(l||'Open')+' &nearr;</a><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:#27272a;color:#a1a1aa;border:none;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;\">Dismiss</button></div>':'');" +
     "document.body.appendChild(b);" +
-    "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},6000);" +
+    "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},7000);" +
+    "}" +
+    "function isH5P(u){" +
+    "if(!u)return false;" +
+    "var l=u.toLowerCase();" +
+    "if(l.indexOf('teams')!==-1||l.indexOf('blackboard.com/ready')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
+    "return l.indexOf('h5p.com')!==-1||l.indexOf('h5p.org')!==-1||l.indexOf('/h5p/')!==-1||l.indexOf('h5p-')!==-1||l.indexOf('.h5p')!==-1;" +
     "}" +
     "function r(d){" +
     "try{" +
@@ -60,7 +66,7 @@ export const Header: React.FC = () => {
     "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
     "return;" +
     "}" +
-    "var fs=document.querySelectorAll('iframe'),cs=null;" +
+    "var fs=document.querySelectorAll('iframe'),h5pFrame=null;" +
     "for(var i=0;i<fs.length;i++){" +
     "try{" +
     "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
@@ -71,16 +77,16 @@ export const Header: React.FC = () => {
     "}" +
     "}catch(e){" +
     "var s=fs[i].src||fs[i].getAttribute('src')||'';" +
-    "if(s&&(s.indexOf('h5p')!==-1||s.indexOf('content')!==-1||s.indexOf('lti')!==-1||s.indexOf('embed')!==-1)){" +
-    "cs=s;" +
+    "if(isH5P(s)){" +
+    "h5pFrame=s;" +
     "}" +
     "}" +
     "}" +
-    "if(cs){" +
-    "n('🔒 Blackboard Protected Frame','Blackboard protects this slide in a secure frame. Click below to open the slide directly in a new tab, then click this bookmark on that page:',cs,'Open Slide in New Tab');" +
+    "if(h5pFrame){" +
+    "n('🔒 H5P Slide In Frame','Click below to open the H5P player in a clean tab, then click this bookmark on that page:',h5pFrame,'Open H5P Slide');" +
     "return;" +
     "}" +
-    "n('⚠️ H5P Module Not Found','Could not detect an active H5P slide. Tip: Right-click the slide area > \"Open frame in new tab\", then click this bookmark on that page!');" +
+    "n('⚠️ H5P Slide Not Detected On This Tab','If Blackboard opened the slide in an \"LTI Launch\" tab, please switch to that tab and click this bookmark! Or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
     "})();";
 
   const handleBookmarkClick = async (e: React.MouseEvent) => {
@@ -222,19 +228,32 @@ export const Header: React.FC = () => {
               </div>
 
               {/* How to use */}
-              <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs space-y-2 leading-relaxed">
+              <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs space-y-2.5 leading-relaxed">
                 <div className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100">
                   <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>How to use on Blackboard:</span>
+                  <span>How to get your .h5p file from Blackboard:</span>
                 </div>
-                <ol className="list-decimal pl-4 space-y-1.5 text-zinc-600 dark:text-zinc-400">
-                  <li>Navigate to your course slide module on Blackboard.</li>
-                  <li>Click your <strong>H5P to PDF</strong> bookmark in your browser bar.</li>
-                  <li>
-                    If Blackboard embeds the slide in a security frame, a popup will appear with <strong>"Open Slide in New Tab ↗"</strong>. Click it, then click your bookmark on that tab to auto-download the <strong>.h5p</strong> file!
-                  </li>
-                  <li>Drag the downloaded file into this viewer for instant answers & printable PDF notes!</li>
-                </ol>
+                
+                <div className="space-y-1 text-zinc-700 dark:text-zinc-300">
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Method 1: Direct 2-Click Download (Fastest & 100% Reliable)
+                  </p>
+                  <ol className="list-decimal pl-4 space-y-1 text-zinc-600 dark:text-zinc-400">
+                    <li>Open your H5P slide or module (or the <strong>"LTI Launch"</strong> tab) on Blackboard.</li>
+                    <li>Look at the bottom-left corner of the slide for the <strong>Reuse</strong> button (⎘ Reuse).</li>
+                    <li>Click <strong>Reuse</strong> ➔ click <strong>"Download as an .h5p file"</strong>.</li>
+                    <li>Drop the downloaded file right here to view all answers & study PDF!</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-1 text-zinc-700 dark:text-zinc-300 pt-2 border-t border-zinc-200 dark:border-zinc-700">
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Method 2: 1-Click Bookmarklet
+                  </p>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    When viewing your H5P slide (or on the <strong>LTI Launch</strong> tab), click your <strong>H5P to PDF</strong> bookmark. It automatically clicks Reuse and downloads your file!
+                  </p>
+                </div>
               </div>
 
               {/* Close Button */}
