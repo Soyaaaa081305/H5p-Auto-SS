@@ -55,7 +55,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
             H5P to PDF
           </span>
           <span className="text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors">
-            Viewer
+            Converter
           </span>
         </div>
       </div>

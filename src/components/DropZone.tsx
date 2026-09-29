@@ -56,10 +56,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
       {/* Title & Microcopy */}
       <div className="text-center mb-8">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 font-sans">
-          H5P to PDF Viewer
+          H5P to PDF Converter
         </h2>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 font-normal">
-          Direct 1080p slide presentation viewer, multi-module playlist, PDF export, and study notes.
+          Direct 1080p slide presentation converter, multi-module playlist, PDF export, and study notes.
         </p>
       </div>
 

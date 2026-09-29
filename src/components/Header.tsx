@@ -54,13 +54,13 @@ export const Header: React.FC = () => {
     "return false;" +
     "}" +
     "if(r(document)){" +
-    "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Viewer...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
     "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
     "return;" +
     "}" +
     "var dlLink=document.querySelector('a[href*=\".h5p\"]');" +
     "if(dlLink&&dlLink.href){" +
-    "n('✅ Direct H5P Link Found','Starting download and opening viewer...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
     "var a2=document.createElement('a');a2.href=dlLink.href;a2.download='';" +
     "document.body.appendChild(a2);a2.click();a2.remove();" +
     "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
@@ -71,7 +71,7 @@ export const Header: React.FC = () => {
     "try{" +
     "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
     "if(fd&&r(fd)){" +
-    "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
     "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
     "return;" +
     "}" +

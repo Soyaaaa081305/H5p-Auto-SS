@@ -1,4 +1,4 @@
-# H5P to PDF & Study Guide Viewer 📚
+# H5P to PDF & Study Guide Converter 📚
 
 > **The easiest way to view H5P files, extract quiz answer keys, and export clean study PDFs directly in your browser.**
 
@@ -28,7 +28,7 @@ This tool lets you drop in any `.h5p` file to view it like a slide deck, reveal 
    - Drag and drop your `.h5p` file onto the upload zone, or click **"Browse files"**.
    - *(Optional)* You can also paste a public URL link to an `.h5p` file.
 3. **Review & Study**:
-   - 📖 **Slide Viewer**: Click through slides, interactive books, or checkpoints with full layout rendering.
+   - 📖 **Slide Converter**: Click through slides, interactive books, or checkpoints with full layout rendering.
    - 🎯 **Answers Button**: Click the green **"Answers"** button on the toolbar to pop open the complete answer key with copyable text.
    - 📄 **Export PDF**: Click **"Download PDF"** to save a complete, multi-column study guide with slides and solutions.
 
