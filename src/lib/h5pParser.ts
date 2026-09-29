@@ -111,6 +111,11 @@ export async function fetchH5PFromUrl(
   value: string,
   signal?: AbortSignal,
 ): Promise<H5PPackage> {
+  if (/blackboard\.com|instructure\.com|canvas|moodle|\/lti\//i.test(value)) {
+    throw new Error(
+      "School portals (Blackboard, Canvas, Moodle) require student login and block external URL downloads. To view this module, click 'Reuse' at the bottom-left of the slide on Blackboard to download the .h5p file, then upload it in the Upload tab."
+    );
+  }
   const url = externalUrl(value);
   if (!url)
     throw new Error(

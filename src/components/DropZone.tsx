@@ -144,11 +144,11 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
       {/* Tab 2: URL Link Importer */}
       {tab === 'url' && (
-        <div className="bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 p-6 sm:p-8 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 p-6 sm:p-8 shadow-xs space-y-4">
           <form onSubmit={handleUrlSubmit} className="space-y-4">
             <div>
               <label htmlFor="h5p-url" className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-2 font-mono">
-                Enter .h5p File URL or Link:
+                Enter Direct .h5p File URL:
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -161,7 +161,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     required
                     value={inputUrl}
                     onChange={(e) => setInputUrl(e.target.value)}
-                    placeholder="https://.../module.h5p"
+                    placeholder="https://example.com/module.h5p"
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 focus:border-transparent font-mono bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                   />
                 </div>
@@ -181,6 +181,34 @@ export const DropZone: React.FC<DropZoneProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Smart LMS / Blackboard Detection Banner */}
+            {/blackboard\.com|instructure\.com|canvas|moodle|\/lti\//i.test(inputUrl) && (
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span className="text-base">⚠️</span>
+                  <span>School LMS / Blackboard Course Page Detected</span>
+                </div>
+                <p className="leading-relaxed text-amber-800 dark:text-amber-300">
+                  This URL is a private Blackboard course webpage that requires your student login session. External websites cannot fetch files directly from this link due to school privacy & CORS protection.
+                </p>
+                <div className="pt-1 border-t border-amber-200 dark:border-amber-800 space-y-1">
+                  <span className="font-semibold block text-amber-950 dark:text-amber-100">
+                    How to view this module in 2 clicks:
+                  </span>
+                  <ol className="list-decimal pl-4 space-y-1 text-amber-900 dark:text-amber-200">
+                    <li>Go back to your Blackboard slide deck (or the <strong>"LTI Launch"</strong> tab).</li>
+                    <li>Look at the bottom-left corner of the slide for the <strong>Reuse</strong> button (⎘ Reuse).</li>
+                    <li>Click <strong>Reuse</strong> ➔ <strong>"Download as an .h5p file"</strong>.</li>
+                    <li>Switch to the <strong>"Upload .h5p File(s)"</strong> tab and drop the downloaded file!</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-sans leading-relaxed">
+              💡 <strong>Note:</strong> Link importing is for direct public <code>.h5p</code> binary files. For school modules hosted on Blackboard, use the built-in <strong>Reuse</strong> button on the slide to download the <code>.h5p</code> file to your device first.
+            </p>
           </form>
         </div>
       )}
