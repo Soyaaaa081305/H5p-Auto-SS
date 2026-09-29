@@ -126,10 +126,9 @@ export function AnswerCards({
             {compact && (
               <details className="pt-2 border-t border-zinc-100 dark:border-zinc-800/60 text-xs text-zinc-400 dark:text-zinc-500 group">
                 <summary className="cursor-pointer font-medium hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors select-none flex items-center gap-1.5">
-                  <span>Question and source</span>
+                  <span>Source details</span>
                 </summary>
                 <div className="mt-2 pl-3 py-1 font-mono text-[11px] space-y-1 text-zinc-500 dark:text-zinc-400 border-l-2 border-zinc-200 dark:border-zinc-700">
-                  {answer.prompt && <p className="font-sans text-xs text-zinc-700 dark:text-zinc-300 my-1">{answer.prompt}</p>}
                   <p>{answer.library} {answer.version}</p>
                   <p className="break-all text-[10px] text-zinc-400">{answer.sourcePath}</p>
                 </div>

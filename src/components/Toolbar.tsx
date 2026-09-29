@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { H5PPackage } from '../types/h5p';
 import { exportSlidesToPdf, exportBatchToPdf } from '../lib/pdfExporter';
 import { externalUrl } from '../lib/security';
@@ -97,60 +97,68 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const hasSlides = Boolean(currentPkg.content?.presentation?.slides?.length);
   const moduleDescription = getModuleDescription(currentPkg);
 
-  // Extract Canva / external presentation link and YouTube link from active module
-  let canvaUrl: string | null = null;
-  let youtubeUrl: string | null = null;
+  // Extract Canva / external presentation link and YouTube link from active module (memoized)
+  const { canvaUrl, youtubeUrl } = useMemo(() => {
+    let cUrl: string | null = null;
+    let yUrl: string | null = null;
 
-  // 1. Check Interactive Video video sources
-  const ivSources: any[] =
-    currentPkg.content?.interactiveVideo?.video?.files ||
-    currentPkg.content?.interactiveVideo?.video?.sources ||
-    currentPkg.content?.interactiveVideo?.files ||
-    currentPkg.content?.interactiveVideo?.sources ||
-    [];
-  for (const s of ivSources) {
-    const p = typeof s === 'string' ? s : s?.path || s?.url;
-    const yId = extractYouTubeId(p);
-    if (yId) {
-      youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
-      break;
-    }
-  }
-
-  // 2. Check Course Presentation Slides
-  const slides: any[] = currentPkg.content?.presentation?.slides || [];
-  slides.forEach((s) => {
-    (s.elements || []).forEach((el: any) => {
-      if (el.action?.library?.includes('Link')) {
-        let u = el.action.params?.linkWidget?.url || el.action.params?.url || '';
-        const proto = el.action.params?.linkWidget?.protocol || '';
-        if (proto && !u.startsWith('http://') && !u.startsWith('https://')) {
-          u = `${proto}${u}`;
-        }
-        u = u.replace(/&amp;/g, '&');
-        const yId = extractYouTubeId(u);
-        if (yId && !youtubeUrl) {
-          youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
-        }
-        if (u.includes('canva.com') && !canvaUrl) {
-          canvaUrl = externalUrl(u) || null;
-        } else if (!canvaUrl && externalUrl(u)) {
-          canvaUrl = externalUrl(u) || null;
-        }
-      } else if (el.action?.library?.includes('Video')) {
-        const src = (el.action.params?.sources || el.action.params?.files)?.[0]?.path;
-        const yId = extractYouTubeId(src);
-        if (yId && !youtubeUrl) {
-          youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
-        }
+    // 1. Check Interactive Video video sources
+    const ivSources: any[] =
+      currentPkg.content?.interactiveVideo?.video?.files ||
+      currentPkg.content?.interactiveVideo?.video?.sources ||
+      currentPkg.content?.interactiveVideo?.files ||
+      currentPkg.content?.interactiveVideo?.sources ||
+      [];
+    for (const s of ivSources) {
+      const p = typeof s === 'string' ? s : s?.path || s?.url;
+      const yId = extractYouTubeId(p);
+      if (yId) {
+        yUrl = `https://www.youtube.com/watch?v=${yId}`;
+        break;
       }
-    });
-  });
+    }
 
-  // Calculate total slides across all packages
-  const totalBatchSlides = packages.reduce(
-    (sum, p) => sum + (p.content?.presentation?.slides?.length || 0),
-    0
+    // 2. Check Course Presentation Slides
+    const slides: any[] = currentPkg.content?.presentation?.slides || [];
+    slides.forEach((s) => {
+      (s.elements || []).forEach((el: any) => {
+        if (el.action?.library?.includes('Link')) {
+          let u = el.action.params?.linkWidget?.url || el.action.params?.url || '';
+          const proto = el.action.params?.linkWidget?.protocol || '';
+          if (proto && !u.startsWith('http://') && !u.startsWith('https://')) {
+            u = `${proto}${u}`;
+          }
+          u = u.replace(/&amp;/g, '&');
+          const yId = extractYouTubeId(u);
+          if (yId && !yUrl) {
+            yUrl = `https://www.youtube.com/watch?v=${yId}`;
+          }
+          if (u.includes('canva.com') && !cUrl) {
+            cUrl = externalUrl(u) || null;
+          } else if (!cUrl && externalUrl(u)) {
+            cUrl = externalUrl(u) || null;
+          }
+        } else if (el.action?.library?.includes('Video')) {
+          const src = (el.action.params?.sources || el.action.params?.files)?.[0]?.path;
+          const yId = extractYouTubeId(src);
+          if (yId && !yUrl) {
+            yUrl = `https://www.youtube.com/watch?v=${yId}`;
+          }
+        }
+      });
+    });
+
+    return { canvaUrl: cUrl, youtubeUrl: yUrl };
+  }, [currentPkg]);
+
+  // Calculate total slides across all packages (memoized)
+  const totalBatchSlides = useMemo(
+    () =>
+      packages.reduce(
+        (sum, p) => sum + (p.content?.presentation?.slides?.length || 0),
+        0
+      ),
+    [packages]
   );
 
   return (

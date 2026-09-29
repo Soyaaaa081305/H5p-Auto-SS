@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Copy, Download, BookOpen, Search, Check, Video, Loader2 } from "lucide-react";
 import type { H5PPackage } from "../types/h5p";
@@ -68,18 +68,37 @@ export function ReviewerModal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const selected = useMemo(() => (all ? packages : [pkg]), [all, packages, pkg]);
 
-  const selected = all ? packages : [pkg];
-  const groups = selected.map((p) => ({
-    pkg: p,
-    answers: p.report.answers.filter((a) =>
-      `${a.prompt} ${answerText(a)} ${a.location}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-    ),
-  }));
-  const answers = groups.flatMap((g) => g.answers);
+  const { groups, answers } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const g = selected.map((p) => ({
+      pkg: p,
+      answers: q
+        ? p.report.answers.filter((a) =>
+            `${a.prompt} ${answerText(a)} ${a.location}`
+              .toLowerCase()
+              .includes(q),
+          )
+        : p.report.answers,
+    }));
+    return {
+      groups: g,
+      answers: g.flatMap((group) => group.answers),
+    };
+  }, [selected, query]);
+
+  const nodesMap = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const p of selected) {
+      for (const n of p.report.nodes) {
+        map.set(n.path, n.params);
+      }
+    }
+    return map;
+  }, [selected]);
+
+  if (!isOpen) return null;
 
   const copy = async () => {
     try {
@@ -269,11 +288,7 @@ export function ReviewerModal({
                   {a.library === "H5P.DragQuestion" && (
                     <div className="mb-3">
                       <DragTargetPreview
-                        params={
-                          group.pkg.report.nodes.find(
-                            (n) => n.path === a.sourcePath,
-                          )?.params || {}
-                        }
+                        params={nodesMap.get(a.sourcePath) || {}}
                         assetMap={group.pkg.assetMap}
                       />
                     </div>
@@ -292,9 +307,7 @@ export function ReviewerModal({
                       </summary>
                       <pre className="whitespace-pre-wrap break-all max-h-60 overflow-auto p-3 mt-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
                         {JSON.stringify(
-                          group.pkg.report.nodes.find(
-                            (n) => n.path === a.sourcePath,
-                          )?.params || {},
+                          nodesMap.get(a.sourcePath) || {},
                           null,
                           2,
                         )}

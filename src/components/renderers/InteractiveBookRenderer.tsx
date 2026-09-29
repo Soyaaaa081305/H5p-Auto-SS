@@ -22,7 +22,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
     <div className="max-w-4xl mx-auto space-y-10">
       {/* Cover / Book Title */}
       {(coverUrl || content.bookCover?.coverDescription) && (
-        <div className="bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs text-center print:border-none print:shadow-none print:p-0">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xs text-center transition-colors print:border-none print:shadow-none print:p-0">
           {coverUrl && (
             <img
               src={coverUrl}
@@ -32,7 +32,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
           )}
           {content.bookCover?.coverDescription && (
             <div
-              className="text-zinc-700 text-base max-w-2xl mx-auto"
+              className="text-zinc-700 dark:text-zinc-300 text-base max-w-2xl mx-auto"
               dangerouslySetInnerHTML={{ __html: safeHtml(content.bookCover.coverDescription) }}
             />
           )}
@@ -46,13 +46,13 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
         return (
           <section
             key={cIdx}
-            className="print-section bg-white rounded-2xl p-8 border border-zinc-200 shadow-2xs print:border-none print:shadow-none print:p-0 print:mb-8"
+            className="print-section bg-white dark:bg-zinc-900 rounded-2xl p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xs transition-colors print:border-none print:shadow-none print:p-0 print:mb-8"
           >
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-zinc-200 print:border-zinc-400">
-              <div className="p-2 rounded-lg bg-zinc-100 text-zinc-800 print:hidden">
+            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-zinc-200 dark:border-zinc-800 print:border-zinc-400">
+              <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 print:hidden">
                 <BookOpen className="w-5 h-5" />
               </div>
-              <h2 className="text-xl font-bold text-zinc-900 font-sans">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-sans">
                 Chapter {cIdx + 1}: {chapter.title || (chapter as any).metadata?.title || 'Untitled Chapter'}
               </h2>
             </div>

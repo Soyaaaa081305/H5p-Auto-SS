@@ -20,7 +20,7 @@ export const ColumnRenderer: React.FC<ColumnRendererProps> = ({
         const library = item.library || itemContent?.library || '';
 
         return (
-          <div key={idx} className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-2xs">
+          <div key={idx} className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xs transition-colors">
             <ElementDispatcher
               action={{
                 library,

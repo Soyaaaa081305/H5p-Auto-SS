@@ -127,12 +127,18 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
     return <ElementDispatcher action={p.image} assetMap={assetMap} />;
   if (library === "H5P.Accordion")
     return (
-      <div>
+      <div className="space-y-3">
         {(Array.isArray(p.panels) ? p.panels : []).map(
           (panel: any, i: number) => (
-            <details key={i}>
-              <summary>{panel.title}</summary>
+            <details
+              key={i}
+              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xs group transition-colors"
+            >
+              <summary className="px-4 py-3 font-semibold text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-850 transition-colors select-none">
+                {panel.title}
+              </summary>
               <div
+                className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800/80 text-sm prose prose-zinc dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: safeHtml(panel.content) }}
               />
             </details>

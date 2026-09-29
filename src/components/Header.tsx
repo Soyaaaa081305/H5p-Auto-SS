@@ -4,95 +4,95 @@ import { Logo } from './Logo';
 import { Bookmark, Sun, Moon, Check, X, Sparkles } from 'lucide-react';
 import { useTheme } from '../lib/theme';
 
+// Resilient Bookmarklet: auto-clicks H5P reuse/download, resolves H5PIntegration export URLs,
+// excludes Blackboard system iframes (like MS Teams API), and guides students to the LTI tab
+const BOOKMARKLET_CODE =
+  "javascript:(function(){" +
+  "function n(t,m,u,l){" +
+  "var i='h5p-toast',o=document.getElementById(i);if(o)o.remove();" +
+  "var b=document.createElement('div');b.id=i;" +
+  "b.style.cssText='position:fixed;top:20px;right:20px;z-index:9999999;background:#18181b;color:#fafafa;padding:16px;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.35);max-width:380px;border:1px solid #3f3f46;line-height:1.4;';" +
+  "b.innerHTML='<div style=\"font-weight:700;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;\"><span>'+t+'</span><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;\">&times;</button></div><p style=\"font-size:12px;color:#d4d4d8;margin:0 0 10px 0;\">'+m+'</p>'+(u?'<div style=\"display:flex;gap:8px;\"><a href=\"'+u+'\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background:#4f46e5;color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;\">'+(l||'Open')+' &nearr;</a><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:#27272a;color:#a1a1aa;border:none;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;\">Dismiss</button></div>':'');" +
+  "document.body.appendChild(b);" +
+  "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},7000);" +
+  "}" +
+  "function isH5P(u){" +
+  "if(!u)return false;" +
+  "var l=u.toLowerCase();" +
+  "if(l.indexOf('teams')!==-1||l.indexOf('blackboard.com/ready')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
+  "return l.indexOf('h5p.com')!==-1||l.indexOf('h5p.org')!==-1||l.indexOf('/h5p/')!==-1||l.indexOf('h5p-')!==-1||l.indexOf('.h5p')!==-1;" +
+  "}" +
+  "function r(d){" +
+  "try{" +
+  "var w=d.defaultView||window;" +
+  "if(w.H5PIntegration&&w.H5PIntegration.contents){" +
+  "for(var k in w.H5PIntegration.contents){" +
+  "var c=w.H5PIntegration.contents[k];" +
+  "if(c&&c.exportUrl){" +
+  "var a=d.createElement('a');a.href=c.exportUrl;a.download=(c.metadata&&c.metadata.title?c.metadata.title:'module')+'.h5p';" +
+  "d.body.appendChild(a);a.click();a.remove();return true;" +
+  "}" +
+  "}" +
+  "}" +
+  "}catch(e){}" +
+  "var btn=d.querySelector('.h5p-reuse,button.h5p-reuse,button[aria-label*=\"Reuse\" i],.h5p-export,a.h5p-export');" +
+  "if(btn){" +
+  "btn.click();" +
+  "var at=0,tm=setInterval(function(){" +
+  "at++;" +
+  "var dl=d.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\"],.h5p-reuse-dialog button');" +
+  "if(dl){clearInterval(tm);dl.click();}" +
+  "else if(at>25){clearInterval(tm);}" +
+  "},100);" +
+  "return true;" +
+  "}" +
+  "return false;" +
+  "}" +
+  "if(r(document)){" +
+  "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+  "return;" +
+  "}" +
+  "var dlLink=document.querySelector('a[href*=\".h5p\"]');" +
+  "if(dlLink&&dlLink.href){" +
+  "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "var a2=document.createElement('a');a2.href=dlLink.href;a2.download='';" +
+  "document.body.appendChild(a2);a2.click();a2.remove();" +
+  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+  "return;" +
+  "}" +
+  "var fs=document.querySelectorAll('iframe'),h5pFrame=null;" +
+  "for(var i=0;i<fs.length;i++){" +
+  "try{" +
+  "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
+  "if(fd&&r(fd)){" +
+  "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+  "return;" +
+  "}" +
+  "}catch(e){" +
+  "var s=fs[i].src||fs[i].getAttribute('src')||'';" +
+  "if(isH5P(s)){" +
+  "h5pFrame=s;" +
+  "}" +
+  "}" +
+  "}" +
+  "if(h5pFrame){" +
+  "n('🔒 H5P Slide In Frame','Click below to open the H5P player in a clean tab, then click this bookmark on that page:',h5pFrame,'Open H5P Slide');" +
+  "return;" +
+  "}" +
+  "n('⚠️ H5P Slide Not Detected On This Tab','If Blackboard opened the slide in an \"LTI Launch\" tab, please switch to that tab and click this bookmark! Or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
+  "})();";
+
 export const Header: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const [showBookmarkHelp, setShowBookmarkHelp] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Resilient Bookmarklet: auto-clicks H5P reuse/download, resolves H5PIntegration export URLs,
-  // excludes Blackboard system iframes (like MS Teams API), and guides students to the LTI tab
-  const bookmarkletCode =
-    "javascript:(function(){" +
-    "function n(t,m,u,l){" +
-    "var i='h5p-toast',o=document.getElementById(i);if(o)o.remove();" +
-    "var b=document.createElement('div');b.id=i;" +
-    "b.style.cssText='position:fixed;top:20px;right:20px;z-index:9999999;background:#18181b;color:#fafafa;padding:16px;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.35);max-width:380px;border:1px solid #3f3f46;line-height:1.4;';" +
-    "b.innerHTML='<div style=\"font-weight:700;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;\"><span>'+t+'</span><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;\">&times;</button></div><p style=\"font-size:12px;color:#d4d4d8;margin:0 0 10px 0;\">'+m+'</p>'+(u?'<div style=\"display:flex;gap:8px;\"><a href=\"'+u+'\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background:#4f46e5;color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;\">'+(l||'Open')+' &nearr;</a><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:#27272a;color:#a1a1aa;border:none;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;\">Dismiss</button></div>':'');" +
-    "document.body.appendChild(b);" +
-    "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},7000);" +
-    "}" +
-    "function isH5P(u){" +
-    "if(!u)return false;" +
-    "var l=u.toLowerCase();" +
-    "if(l.indexOf('teams')!==-1||l.indexOf('blackboard.com/ready')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
-    "return l.indexOf('h5p.com')!==-1||l.indexOf('h5p.org')!==-1||l.indexOf('/h5p/')!==-1||l.indexOf('h5p-')!==-1||l.indexOf('.h5p')!==-1;" +
-    "}" +
-    "function r(d){" +
-    "try{" +
-    "var w=d.defaultView||window;" +
-    "if(w.H5PIntegration&&w.H5PIntegration.contents){" +
-    "for(var k in w.H5PIntegration.contents){" +
-    "var c=w.H5PIntegration.contents[k];" +
-    "if(c&&c.exportUrl){" +
-    "var a=d.createElement('a');a.href=c.exportUrl;a.download=(c.metadata&&c.metadata.title?c.metadata.title:'module')+'.h5p';" +
-    "d.body.appendChild(a);a.click();a.remove();return true;" +
-    "}" +
-    "}" +
-    "}" +
-    "}catch(e){}" +
-    "var btn=d.querySelector('.h5p-reuse,button.h5p-reuse,button[aria-label*=\"Reuse\" i],.h5p-export,a.h5p-export');" +
-    "if(btn){" +
-    "btn.click();" +
-    "var at=0,tm=setInterval(function(){" +
-    "at++;" +
-    "var dl=d.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\"],.h5p-reuse-dialog button');" +
-    "if(dl){clearInterval(tm);dl.click();}" +
-    "else if(at>25){clearInterval(tm);}" +
-    "},100);" +
-    "return true;" +
-    "}" +
-    "return false;" +
-    "}" +
-    "if(r(document)){" +
-    "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
-    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
-    "return;" +
-    "}" +
-    "var dlLink=document.querySelector('a[href*=\".h5p\"]');" +
-    "if(dlLink&&dlLink.href){" +
-    "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
-    "var a2=document.createElement('a');a2.href=dlLink.href;a2.download='';" +
-    "document.body.appendChild(a2);a2.click();a2.remove();" +
-    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
-    "return;" +
-    "}" +
-    "var fs=document.querySelectorAll('iframe'),h5pFrame=null;" +
-    "for(var i=0;i<fs.length;i++){" +
-    "try{" +
-    "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
-    "if(fd&&r(fd)){" +
-    "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
-    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
-    "return;" +
-    "}" +
-    "}catch(e){" +
-    "var s=fs[i].src||fs[i].getAttribute('src')||'';" +
-    "if(isH5P(s)){" +
-    "h5pFrame=s;" +
-    "}" +
-    "}" +
-    "}" +
-    "if(h5pFrame){" +
-    "n('🔒 H5P Slide In Frame','Click below to open the H5P player in a clean tab, then click this bookmark on that page:',h5pFrame,'Open H5P Slide');" +
-    "return;" +
-    "}" +
-    "n('⚠️ H5P Slide Not Detected On This Tab','If Blackboard opened the slide in an \"LTI Launch\" tab, please switch to that tab and click this bookmark! Or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
-    "})();";
-
   const handleBookmarkClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      await navigator.clipboard.writeText(bookmarkletCode);
+      await navigator.clipboard.writeText(BOOKMARKLET_CODE);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch (err) {
@@ -118,14 +118,14 @@ export const Header: React.FC = () => {
           </div>
 
           <a
-            href={bookmarkletCode}
+            href={BOOKMARKLET_CODE}
             onClick={handleBookmarkClick}
             draggable={true}
             title="Click to copy bookmarklet, or drag to your Bookmarks Bar"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white font-medium text-xs shadow-xs transition-transform active:scale-95 cursor-grab active:cursor-grabbing flex-shrink-0"
           >
             <Bookmark className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">H5P to PDF Website</span><span className="sm:hidden">Bookmark</span>
+            <span className="hidden sm:inline">H5P Bookmarklet</span><span className="sm:hidden">Bookmark</span>
           </a>
 
           {/* Dark / Light Mode Toggle Button */}
@@ -205,7 +205,7 @@ export const Header: React.FC = () => {
                   </p>
                   <div className="pt-1 flex justify-center">
                     <a
-                      href={bookmarkletCode}
+                      href={BOOKMARKLET_CODE}
                       draggable={true}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white font-semibold text-xs shadow-md cursor-grab active:cursor-grabbing transition-transform hover:scale-105 active:scale-95"
                       onClick={(e) => e.preventDefault()}
