@@ -27,7 +27,7 @@ test("local book answers, privacy, media opt-in, clipboard, PDF and responsive d
     page.getByRole("button", { name: "Answers", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Watch on YouTube" }),
+    page.locator('iframe[src*="youtube"]'),
   ).toBeVisible();
   await page.getByRole("button", { name: "Answers", exact: true }).click();
   const dialog = page.getByRole("dialog");

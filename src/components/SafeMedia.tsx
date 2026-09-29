@@ -53,10 +53,14 @@ export function SafeMedia({
     }
   }
 
-  // 1. YouTube Video handling (defaults directly to player + "Watch on YouTube" button)
+  // 1. YouTube Video handling (embed player with origin verification & no redundant external button)
   const ytId = extractYouTubeId(cleanPath);
   if (ytId) {
-    const embedUrl = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0&enablejsapi=1`;
+    const originParam =
+      typeof window !== "undefined" && window.location.origin
+        ? `&origin=${encodeURIComponent(window.location.origin)}`
+        : "";
+    const embedUrl = `https://www.youtube.com/embed/${ytId}?rel=0&enablejsapi=1${originParam}`;
     const directWatchUrl = `https://www.youtube.com/watch?v=${ytId}`;
 
     return (
@@ -65,6 +69,7 @@ export function SafeMedia({
           <iframe
             src={embedUrl}
             title={title || alt || "YouTube Video"}
+            referrerPolicy="strict-origin-when-cross-origin"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             className="w-full h-full border-0"
@@ -72,30 +77,17 @@ export function SafeMedia({
           />
         </div>
 
-        {/* Action bar with direct YouTube link */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-sans">
+        {/* Video title if provided */}
+        {title && (
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-sans px-1">
             <Video className="w-3.5 h-3.5 text-red-500" />
-            <span>
-              {title ? `${title} • ` : ""}YouTube Video
-            </span>
+            <span>{title}</span>
           </div>
-
-          <a
-            href={directWatchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
-            title="Open video directly on YouTube in a new tab"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Watch on YouTube ↗</span>
-          </a>
-        </div>
+        )}
 
         {loadError && (
           <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
-            <span>Video playback restricted in embed? Click "Watch on YouTube" to open directly.</span>
+            <span>Video playback restricted in embed? Click to open directly.</span>
             <a
               href={directWatchUrl}
               target="_blank"
