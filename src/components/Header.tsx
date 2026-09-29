@@ -9,8 +9,79 @@ export const Header: React.FC = () => {
   const [showBookmarkHelp, setShowBookmarkHelp] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // 1-Click Bookmarklet code: triggers H5P download on Blackboard and opens H5P to PDF Website
-  const bookmarkletCode = `javascript:(function(){var d=document,b=d.querySelector('.h5p-reuse')||d.querySelector('button[aria-label*="Reuse"]');if(!b){var f=d.querySelectorAll('iframe');for(var i=0;i<f.length;i++){try{var ib=f[i].contentDocument?.querySelector('.h5p-reuse')||f[i].contentDocument?.querySelector('button[aria-label*="Reuse"]');if(ib){b=ib;break;}}catch(e){}}}if(b){b.click();}window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank','noopener,noreferrer');})();`;
+  // Resilient Bookmarklet: auto-clicks H5P reuse/download, resolves H5PIntegration export URLs,
+  // handles Blackboard cross-origin frames, and provides clean on-screen toast feedback
+  const bookmarkletCode =
+    "javascript:(function(){" +
+    "function n(t,m,u,l){" +
+    "var i='h5p-toast',o=document.getElementById(i);if(o)o.remove();" +
+    "var b=document.createElement('div');b.id=i;" +
+    "b.style.cssText='position:fixed;top:20px;right:20px;z-index:9999999;background:#18181b;color:#fafafa;padding:16px;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.35);max-width:380px;border:1px solid #3f3f46;line-height:1.4;';" +
+    "b.innerHTML='<div style=\"font-weight:700;font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;\"><span>'+t+'</span><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;\">&times;</button></div><p style=\"font-size:12px;color:#d4d4d8;margin:0 0 10px 0;\">'+m+'</p>'+(u?'<div style=\"display:flex;gap:8px;\"><a href=\"'+u+'\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"background:#4f46e5;color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;\">'+(l||'Open')+' &nearr;</a><button onclick=\"document.getElementById(\\''+i+'\\').remove()\" style=\"background:#27272a;color:#a1a1aa;border:none;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;\">Dismiss</button></div>':'');" +
+    "document.body.appendChild(b);" +
+    "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},6000);" +
+    "}" +
+    "function r(d){" +
+    "try{" +
+    "var w=d.defaultView||window;" +
+    "if(w.H5PIntegration&&w.H5PIntegration.contents){" +
+    "for(var k in w.H5PIntegration.contents){" +
+    "var c=w.H5PIntegration.contents[k];" +
+    "if(c&&c.exportUrl){" +
+    "var a=d.createElement('a');a.href=c.exportUrl;a.download=(c.metadata&&c.metadata.title?c.metadata.title:'module')+'.h5p';" +
+    "d.body.appendChild(a);a.click();a.remove();return true;" +
+    "}" +
+    "}" +
+    "}" +
+    "}catch(e){}" +
+    "var btn=d.querySelector('.h5p-reuse,button.h5p-reuse,button[aria-label*=\"Reuse\" i],.h5p-export,a.h5p-export');" +
+    "if(btn){" +
+    "btn.click();" +
+    "var at=0,tm=setInterval(function(){" +
+    "at++;" +
+    "var dl=d.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\"],.h5p-reuse-dialog button');" +
+    "if(dl){clearInterval(tm);dl.click();}" +
+    "else if(at>25){clearInterval(tm);}" +
+    "},100);" +
+    "return true;" +
+    "}" +
+    "return false;" +
+    "}" +
+    "if(r(document)){" +
+    "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Viewer...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+    "return;" +
+    "}" +
+    "var dlLink=document.querySelector('a[href*=\".h5p\"]');" +
+    "if(dlLink&&dlLink.href){" +
+    "n('✅ Direct H5P Link Found','Starting download and opening viewer...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "var a2=document.createElement('a');a2.href=dlLink.href;a2.download='';" +
+    "document.body.appendChild(a2);a2.click();a2.remove();" +
+    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+    "return;" +
+    "}" +
+    "var fs=document.querySelectorAll('iframe'),cs=null;" +
+    "for(var i=0;i<fs.length;i++){" +
+    "try{" +
+    "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
+    "if(fd&&r(fd)){" +
+    "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Viewer');" +
+    "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+    "return;" +
+    "}" +
+    "}catch(e){" +
+    "var s=fs[i].src||fs[i].getAttribute('src')||'';" +
+    "if(s&&(s.indexOf('h5p')!==-1||s.indexOf('content')!==-1||s.indexOf('lti')!==-1||s.indexOf('embed')!==-1)){" +
+    "cs=s;" +
+    "}" +
+    "}" +
+    "}" +
+    "if(cs){" +
+    "n('🔒 Blackboard Protected Frame','Blackboard protects this slide in a secure frame. Click below to open the slide directly in a new tab, then click this bookmark on that page:',cs,'Open Slide in New Tab');" +
+    "return;" +
+    "}" +
+    "n('⚠️ H5P Module Not Found','Could not detect an active H5P slide. Tip: Right-click the slide area > \"Open frame in new tab\", then click this bookmark on that page!');" +
+    "})();";
 
   const handleBookmarkClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -151,11 +222,19 @@ export const Header: React.FC = () => {
               </div>
 
               {/* How to use */}
-              <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs flex items-start gap-2 leading-relaxed">
-                <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong>When on Blackboard:</strong> Click your new bookmark while on any H5P slide module. It triggers the reuse download and opens this site for instant conversion!
-                </span>
+              <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs space-y-2 leading-relaxed">
+                <div className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100">
+                  <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>How to use on Blackboard:</span>
+                </div>
+                <ol className="list-decimal pl-4 space-y-1.5 text-zinc-600 dark:text-zinc-400">
+                  <li>Navigate to your course slide module on Blackboard.</li>
+                  <li>Click your <strong>H5P to PDF</strong> bookmark in your browser bar.</li>
+                  <li>
+                    If Blackboard embeds the slide in a security frame, a popup will appear with <strong>"Open Slide in New Tab ↗"</strong>. Click it, then click your bookmark on that tab to auto-download the <strong>.h5p</strong> file!
+                  </li>
+                  <li>Drag the downloaded file into this viewer for instant answers & printable PDF notes!</li>
+                </ol>
               </div>
 
               {/* Close Button */}
