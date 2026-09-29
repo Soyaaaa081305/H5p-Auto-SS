@@ -4,6 +4,7 @@ import { resolveAsset } from '../../lib/h5pParser';
 import { BlanksRenderer } from './BlanksRenderer';
 import { SummaryRenderer } from './SummaryRenderer';
 import { MultiChoiceRenderer } from './MultiChoiceRenderer';
+import { DragTextRenderer } from './DragTextRenderer';
 import { ExternalLink } from 'lucide-react';
 
 interface ElementDispatcherProps {
@@ -26,12 +27,17 @@ export const ElementDispatcher: React.FC<ElementDispatcherProps> = ({
     return <BlanksRenderer params={params} />;
   }
 
-  // 2. Summary (Choose correct statement)
+  // 2. Drag the Words / DragText
+  if (library.startsWith('H5P.DragText') || library.startsWith('H5P.DragQuestion')) {
+    return <DragTextRenderer params={params} />;
+  }
+
+  // 3. Summary (Choose correct statement)
   if (library.startsWith('H5P.Summary')) {
     return <SummaryRenderer params={params} />;
   }
 
-  // 3. Multiple choice / Single choice / True False
+  // 4. Multiple choice / Single choice / True False
   if (
     library.startsWith('H5P.MultiChoice') ||
     library.startsWith('H5P.SingleChoiceSet') ||

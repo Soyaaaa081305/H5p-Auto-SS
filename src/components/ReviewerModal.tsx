@@ -12,7 +12,7 @@ interface ReviewerModalProps {
 interface QuestionItem {
   id: string;
   slideNumber: number;
-  type: 'blanks' | 'summary' | 'multichoice' | 'truefalse';
+  type: 'blanks' | 'summary' | 'multichoice' | 'truefalse' | 'dragtext';
   promptTitle: string;
   question: string;
   correctAnswer: string;
@@ -123,6 +123,37 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
               type: 'blanks',
               promptTitle: `Fill in the Blank`,
               question: qText.trim(),
+              correctAnswer: ans,
+            });
+          }
+        });
+      }
+
+      // 2. Drag the Words / DragText
+      if (lib.startsWith('H5P.DragText') || lib.startsWith('H5P.DragQuestion')) {
+        const textField = params.textField || '';
+        const lines = textField.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
+        lines.forEach((line: string) => {
+          const parts = line.split(/(\*[^*]+\*)/g);
+          let qText = '';
+          let ans = '';
+          parts.forEach((p) => {
+            if (p.startsWith('*') && p.endsWith('*')) {
+              const raw = p.slice(1, -1);
+              ans = raw.split(':')[0].trim();
+              qText += ' _______ ';
+            } else {
+              qText += cleanHtml(p);
+            }
+          });
+          qText = qText.replace(/^\s*\[\d+\]\s*/, '').replace(/^\s*\(\d+\)\s*/, '').trim();
+          if (ans) {
+            questions.push({
+              id: `dragtext-${sIdx}-${questions.length}`,
+              slideNumber: sIdx + 1,
+              type: 'dragtext',
+              promptTitle: `Drag the Words Match`,
+              question: qText,
               correctAnswer: ans,
             });
           }

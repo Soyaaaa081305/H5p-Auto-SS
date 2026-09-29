@@ -153,6 +153,103 @@ function renderBlanksOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   });
 }
 
+function renderDragTextOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const taskDescription = cleanHtml(params.taskDescription || 'Drag the words into the correct boxes');
+  const textField = params.textField || '';
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(60, 50, 1800, 980);
+  ctx.strokeRect(60, 50, 1800, 980);
+
+  // Header Title
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(taskDescription, 100, 120);
+
+  // Subtitle / Prompt
+  ctx.fillStyle = '#64748b';
+  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Auto-Solved Study Mode • All answers verified and placed in-line', 100, 160);
+
+  // Divider line
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(100, 185);
+  ctx.lineTo(1820, 185);
+  ctx.stroke();
+
+  // Parse lines
+  const rawLines = textField.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
+
+  // Render 2 columns
+  const leftX = 100;
+  const rightX = 970;
+  const colWidth = 850;
+  const cardHeight = rawLines.length > 6 ? 138 : 160;
+
+  rawLines.forEach((line: string, idx: number) => {
+    if (idx >= 10) return; // Fits up to 10 questions cleanly
+    const isRight = idx >= 5;
+    const colX = isRight ? rightX : leftX;
+    const rowIdx = isRight ? idx - 5 : idx;
+    const cardY = 210 + rowIdx * (cardHeight + 16);
+
+    // Card box
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(colX, cardY, colWidth, cardHeight);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
+
+    // Question number tag
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Item [${idx + 1}]`, colX + 20, cardY + 28);
+
+    // Parse solution and text
+    const parts = line.split(/(\*[^*]+\*)/g);
+    let fullText = '';
+    let solution = '';
+
+    parts.forEach((p) => {
+      if (p.startsWith('*') && p.endsWith('*')) {
+        const raw = p.slice(1, -1);
+        const [sol] = raw.split(':');
+        solution = sol.trim();
+        fullText += ` [ ✓ ${solution} ] `;
+      } else {
+        fullText += p.replace(/<[^>]+>/g, '').replace(/^\s*\[\d+\]\s*/, '').replace(/^\s*\(\d+\)\s*/, '');
+      }
+    });
+
+    // Draw question text wrapped
+    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#334155';
+    wrapText(ctx, fullText, colX + 20, cardY + 56, colWidth - 40, 22);
+
+    // Draw green answer pill at bottom of card
+    if (solution) {
+      ctx.fillStyle = '#ecfdf5';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1;
+      const ansWidth = ctx.measureText(`✓ Match: ${solution}`).width + 24;
+      ctx.fillRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
+      ctx.strokeRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`✓ Match: ${solution}`, colX + 28, cardY + cardHeight - 18);
+    }
+  });
+}
+
 function renderSummaryOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   const intro = cleanHtml(params.intro || 'Choose the correct statement:');
   const summaries: Array<{ summary: string[] }> = params.summaries || [];
@@ -400,6 +497,8 @@ async function renderSlideToCanvas(
 
     if (library.startsWith('H5P.Blanks')) {
       renderBlanksOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.DragText') || library.startsWith('H5P.DragQuestion')) {
+      renderDragTextOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.Summary')) {
       renderSummaryOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.MultiChoice') || library.startsWith('H5P.SingleChoiceSet')) {

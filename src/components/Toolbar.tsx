@@ -294,7 +294,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               title="Add another .h5p module to playlist"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add Module</span>
+              <span>Add Module</span>
             </button>
           )}
 
