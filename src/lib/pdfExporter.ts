@@ -505,10 +505,221 @@ async function renderSlideToCanvas(
       renderMultiChoiceOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.TrueFalse')) {
       renderTrueFalseOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.Image')) {
+      const imgPath = params.file?.path;
+      const imgUrl = resolveAsset(imgPath, assetMap);
+      if (imgUrl) {
+        try {
+          const img = await loadImage(imgUrl);
+          const elX = ((el.x ?? 0) / 100) * 1920;
+          const elY = ((el.y ?? 0) / 100) * 1080;
+          const elW = ((el.width ?? 100) / 100) * 1920;
+          const elH = ((el.height ?? 100) / 100) * 1080;
+          ctx.drawImage(img, elX, elY, elW, elH);
+        } catch (e) {
+          console.warn('Could not draw element image', e);
+        }
+      }
+    } else if (library.startsWith('H5P.Text')) {
+      const txt = cleanHtml(params.text || '');
+      if (txt) {
+        const elX = ((el.x ?? 5) / 100) * 1920;
+        const elY = ((el.y ?? 5) / 100) * 1080;
+        const elW = ((el.width ?? 90) / 100) * 1920;
+        ctx.fillStyle = '#18181b';
+        ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        wrapText(ctx, txt, elX, elY + 24, elW, 30);
+      }
     }
   }
 
   return canvas;
+}
+
+// Universal Question & Study Guide PDF generator for non-slide modules (Interactive Video, Question Sets, etc.)
+export async function exportQuestionsToPdf(
+  pkg: H5PPackage,
+  onProgress?: (current: number, total: number) => void
+): Promise<void> {
+  const questions: Array<{ title: string; question: string; answer: string; distractors?: string[] }> = [];
+
+  const collect = (action: any) => {
+    if (!action) return;
+    const lib = action.library || '';
+    const params = action.params || {};
+
+    if (lib.startsWith('H5P.Blanks')) {
+      (params.questions || []).forEach((qStr: string) => {
+        const parts = qStr.split(/(\*[^*]+\*)/g);
+        let q = '', a = '';
+        parts.forEach((p: string) => {
+          if (p.startsWith('*') && p.endsWith('*')) {
+            a = p.slice(1, -1).split(':')[0].trim();
+            q += ' [ ' + a + ' ] ';
+          } else {
+            q += cleanHtml(p);
+          }
+        });
+        if (a) questions.push({ title: 'Fill in the Blank', question: q.trim(), answer: a });
+      });
+    } else if (lib.startsWith('H5P.DragText') || lib.startsWith('H5P.DragQuestion')) {
+      (params.textField || '').split(/\n+/).forEach((line: string) => {
+        const parts = line.split(/(\*[^*]+\*)/g);
+        let q = '', a = '';
+        parts.forEach((p: string) => {
+          if (p.startsWith('*') && p.endsWith('*')) {
+            a = p.slice(1, -1).split(':')[0].trim();
+            q += ' [ ' + a + ' ] ';
+          } else {
+            q += cleanHtml(p);
+          }
+        });
+        if (a) questions.push({ title: 'Drag the Words Match', question: q.trim(), answer: a });
+      });
+    } else if (lib.startsWith('H5P.Summary')) {
+      (params.summaries || []).forEach((s: any, idx: number) => {
+        const stmts = s.summary || [];
+        if (stmts.length > 0) {
+          questions.push({
+            title: `Summary #${idx + 1}`,
+            question: 'Which statement accurately describes the course concept?',
+            answer: cleanHtml(stmts[0]),
+            distractors: stmts.slice(1).map(cleanHtml)
+          });
+        }
+      });
+    } else if (lib.startsWith('H5P.MultiChoice') || lib.startsWith('H5P.SingleChoiceSet')) {
+      const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
+      const answers: any[] = params.answers || [];
+      const correct = answers.find(a => a.correct);
+      const distractors = answers.filter(a => !a.correct).map(a => cleanHtml(a.text));
+      questions.push({
+        title: 'Multiple Choice',
+        question: qText,
+        answer: correct ? cleanHtml(correct.text) : 'None marked',
+        distractors
+      });
+    } else if (lib.startsWith('H5P.TrueFalse')) {
+      const isTrue = String(params.correct).toLowerCase() === 'true';
+      questions.push({
+        title: 'True or False',
+        question: cleanHtml(params.question || 'True or False Question'),
+        answer: isTrue ? 'True' : 'False',
+        distractors: [isTrue ? 'False' : 'True']
+      });
+    }
+  };
+
+  (pkg.content?.interactiveVideo?.interactions || pkg.content?.interactions || []).forEach((i: any) => collect(i.action));
+  (pkg.content?.questions || []).forEach((q: any) => collect(q.action || q));
+  collect({ library: pkg.mainLibrary, params: pkg.content });
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'px',
+    format: [1920, 1080],
+    hotfixes: ['px_scaling'],
+  });
+
+  const title = pkg.metadata.title || pkg.fileName.replace(/\.h5p$/i, '');
+
+  if (questions.length === 0) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 1920, 1080);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(title, 100, 120);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Module Type: ${pkg.mainLibrary}`, 100, 170);
+    ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('Interactive video or media module. All parameters are viewable in the interactive web player.', 100, 240);
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+    doc.save(`${title.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()}_Study_Guide.pdf`);
+    return;
+  }
+
+  const pageSize = 2;
+  const totalPages = Math.ceil(questions.length / pageSize);
+
+  for (let pIdx = 0; pIdx < totalPages; pIdx++) {
+    if (onProgress) onProgress(pIdx + 1, totalPages);
+    if (pIdx > 0) doc.addPage([1920, 1080], 'landscape');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 1920, 1080);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(title, 100, 110);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Study Guide & Verified Answer Key • Page ${pIdx + 1} of ${totalPages}`, 100, 150);
+
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 175);
+    ctx.lineTo(1820, 175);
+    ctx.stroke();
+
+    const pageQuestions = questions.slice(pIdx * pageSize, (pIdx + 1) * pageSize);
+
+    pageQuestions.forEach((q, qIdx) => {
+      const cardY = 210 + qIdx * 400;
+      const cardW = 1720;
+      const cardH = 370;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(100, cardY, cardW, cardH);
+      ctx.strokeRect(100, cardY, cardW, cardH);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Question ${pIdx * pageSize + qIdx + 1} (${q.title})`, 130, cardY + 45);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, q.question, 130, cardY + 90, cardW - 60, 28);
+
+      ctx.fillStyle = '#ecfdf5';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.fillRect(130, cardY + 180, cardW - 60, 75);
+      ctx.strokeRect(130, cardY + 180, cardW - 60, 75);
+
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('✓ CORRECT ANSWER:', 155, cardY + 225);
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, q.answer, 400, cardY + 225, cardW - 440, 24);
+
+      if (q.distractors && q.distractors.length > 0) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        wrapText(ctx, `Incorrect options: ${q.distractors.join(' | ')}`, 130, cardY + 290, cardW - 60, 22);
+      }
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+  }
+
+  doc.save(`${title.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()}_Study_Guide.pdf`);
 }
 
 export async function exportSlidesToPdf(
@@ -517,7 +728,8 @@ export async function exportSlidesToPdf(
 ): Promise<void> {
   const slides: any[] = pkg.content?.presentation?.slides || [];
   if (slides.length === 0) {
-    throw new Error('No slides found to export.');
+    // Gracefully export questions & study notes for non-presentation modules
+    return exportQuestionsToPdf(pkg, onProgress);
   }
 
   const doc = new jsPDF({
@@ -591,10 +803,8 @@ export async function exportBatchToPdf(
 
   let totalSlides = 0;
   packages.forEach((p) => {
-    totalSlides += p.content?.presentation?.slides?.length || 0;
+    totalSlides += (p.content?.presentation?.slides?.length || 1);
   });
-
-  if (totalSlides === 0) throw new Error('No slides found across modules.');
 
   const doc = new jsPDF({
     orientation: 'landscape',
@@ -609,6 +819,29 @@ export async function exportBatchToPdf(
     const pkg = packages[pIdx];
     const slides: any[] = pkg.content?.presentation?.slides || [];
     const pkgTitle = pkg.metadata.title || pkg.fileName;
+
+    if (slides.length === 0) {
+      globalSlideCount++;
+      if (onProgress) onProgress(globalSlideCount, totalSlides, pkgTitle);
+      if (globalSlideCount > 1) doc.addPage([1920, 1080], 'landscape');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 1920, 1080);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(pkgTitle, 100, 120);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Module Type: ${pkg.mainLibrary}`, 100, 170);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+      continue;
+    }
 
     for (let sIdx = 0; sIdx < slides.length; sIdx++) {
       globalSlideCount++;

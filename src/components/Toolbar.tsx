@@ -22,6 +22,28 @@ interface ToolbarProps {
   onResetAll: () => void;
 }
 
+function getModuleBadge(pkg: H5PPackage): string {
+  const slides = pkg.content?.presentation?.slides;
+  if (slides && slides.length > 0) return `${slides.length}`;
+  const videoInteractions = pkg.content?.interactiveVideo?.interactions;
+  if (videoInteractions && videoInteractions.length > 0) return `${videoInteractions.length} cp`;
+  if (pkg.content?.interactiveVideo) return 'Video';
+  const questions = pkg.content?.questions;
+  if (questions && questions.length > 0) return `${questions.length} q`;
+  return 'H5P';
+}
+
+function getModuleDescription(pkg: H5PPackage): string {
+  const slides = pkg.content?.presentation?.slides;
+  if (slides && slides.length > 0) return `${slides.length} slides`;
+  const videoInteractions = pkg.content?.interactiveVideo?.interactions;
+  if (videoInteractions && videoInteractions.length > 0) return `${videoInteractions.length} checkpoints • Interactive Video`;
+  if (pkg.content?.interactiveVideo) return 'Interactive Video';
+  const questions = pkg.content?.questions;
+  if (questions && questions.length > 0) return `${questions.length} questions • Quiz Set`;
+  return 'Interactive Module';
+}
+
 export const Toolbar: React.FC<ToolbarProps> = ({
   packages,
   activePkgIndex,
@@ -80,7 +102,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   const title = currentPkg.metadata.title || currentPkg.fileName;
-  const slideCount = currentPkg.content?.presentation?.slides?.length;
+  const hasSlides = Boolean(currentPkg.content?.presentation?.slides?.length);
+  const moduleDescription = getModuleDescription(currentPkg);
 
   // Extract Canva / external presentation link from active module
   let canvaUrl: string | null = null;
@@ -130,7 +153,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               {packages.map((pkgItem, idx) => {
                 const isActive = idx === activePkgIndex;
                 const pTitle = pkgItem.metadata.title || pkgItem.fileName;
-                const pSlides = pkgItem.content?.presentation?.slides?.length || 0;
+                const pBadge = getModuleBadge(pkgItem);
 
                 return (
                   <div
@@ -153,7 +176,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                           : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
                       }`}
                     >
-                      {pSlides}
+                      {pBadge}
                     </span>
                     {packages.length > 1 && (
                       <button
@@ -208,7 +231,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   Module {activePkgIndex + 1}/{packages.length}
                 </span>
               )}
-              {slideCount !== undefined && <span>{slideCount} slides</span>}
+              <span>{moduleDescription}</span>
               <span>• {(currentPkg.fileSize / 1024 / 1024).toFixed(1)} MB</span>
             </div>
           </div>
@@ -248,7 +271,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               onClick={handleDownloadBatchPdf}
               disabled={isExporting}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-              title={`Merge all ${packages.length} modules (${totalBatchSlides} total slides) into 1 PDF`}
+              title={`Merge all ${packages.length} modules into 1 PDF`}
             >
               {isExporting ? (
                 <>
@@ -258,7 +281,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               ) : (
                 <>
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Merge All ({packages.length}) to 1 PDF</span>
+                  <span>
+                    {totalBatchSlides > 0
+                      ? `Merge All (${packages.length}) to 1 PDF`
+                      : `Export All (${packages.length}) Study Guide`}
+                  </span>
                 </>
               )}
             </button>
@@ -270,7 +297,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={handleDownloadSinglePdf}
             disabled={isExporting}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-            title={packages.length > 1 ? 'Download this current module PDF' : 'Download full 1080p PDF'}
+            title={packages.length > 1 ? 'Download this current module PDF' : 'Download full PDF'}
           >
             {isExporting && packages.length === 1 ? (
               <>
@@ -280,7 +307,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             ) : (
               <>
                 <Download className="w-3.5 h-3.5" />
-                <span>{packages.length > 1 ? 'This Module PDF' : 'Download PDF'}</span>
+                <span>
+                  {packages.length > 1
+                    ? (hasSlides ? 'This Module PDF' : 'This Module Study PDF')
+                    : (hasSlides ? 'Download PDF' : 'Download Study PDF')}
+                </span>
               </>
             )}
           </button>

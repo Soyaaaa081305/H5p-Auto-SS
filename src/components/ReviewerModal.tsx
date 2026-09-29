@@ -11,7 +11,7 @@ interface ReviewerModalProps {
 
 interface QuestionItem {
   id: string;
-  slideNumber: number;
+  slideNumber: number | string;
   type: 'blanks' | 'summary' | 'multichoice' | 'truefalse' | 'dragtext';
   promptTitle: string;
   question: string;
@@ -52,175 +52,200 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
 
   if (!isOpen) return null;
 
-  // Extract all questions across all slides
+  // Extract all questions across slides, interactive videos, question sets, or fallbacks
   const questions: QuestionItem[] = [];
-  const slides: any[] = pkg.content?.presentation?.slides || [];
 
-  slides.forEach((slide, sIdx) => {
-    const elements: any[] = slide.elements || [];
-    elements.forEach((el) => {
-      const action = el.action;
-      if (!action) return;
-      const lib = action.library || '';
-      const params = action.params || {};
+  const extractFromAction = (action: any, locationLabel: string | number) => {
+    if (!action) return;
+    const lib = action.library || '';
+    const params = action.params || {};
 
-      // 1. Fill in the Blanks
-      if (lib.startsWith('H5P.Blanks')) {
-        const rawQuestions: string[] = params.questions || [];
-        rawQuestions.forEach((qStr) => {
-          const pRegex = /<p>(.*?)<\/p>/gi;
-          let match;
-          let found = false;
-          while ((match = pRegex.exec(qStr)) !== null) {
-            found = true;
-            const paragraph = match[1].trim();
-            if (!paragraph) continue;
+    // 1. Fill in the Blanks
+    if (lib.startsWith('H5P.Blanks')) {
+      const rawQuestions: string[] = params.questions || [];
+      rawQuestions.forEach((qStr) => {
+        const pRegex = /<p>(.*?)<\/p>/gi;
+        let match;
+        let found = false;
+        while ((match = pRegex.exec(qStr)) !== null) {
+          found = true;
+          const paragraph = match[1].trim();
+          if (!paragraph) continue;
 
-            const parts = paragraph.split(/(\*[^*]+\*)/g);
-            let qText = '';
-            let ans = '';
-
-            parts.forEach((p) => {
-              if (p.startsWith('*') && p.endsWith('*')) {
-                const raw = p.slice(1, -1);
-                const [sol] = raw.split(':');
-                ans = sol.split('/')[0].trim();
-                qText += ' _______ ';
-              } else {
-                qText += cleanHtml(p);
-              }
-            });
-
-            qText = qText.replace(/^\s*\(\d+\)\s*/, '').trim();
-
-            questions.push({
-              id: `blank-${sIdx}-${questions.length}`,
-              slideNumber: sIdx + 1,
-              type: 'blanks',
-              promptTitle: `Fill in the Blank`,
-              question: qText,
-              correctAnswer: ans,
-            });
-          }
-
-          if (!found && qStr.trim()) {
-            const parts = qStr.split(/(\*[^*]+\*)/g);
-            let qText = '';
-            let ans = '';
-            parts.forEach((p) => {
-              if (p.startsWith('*') && p.endsWith('*')) {
-                const raw = p.slice(1, -1);
-                const [sol] = raw.split(':');
-                ans = sol.split('/')[0].trim();
-                qText += ' _______ ';
-              } else {
-                qText += cleanHtml(p);
-              }
-            });
-            questions.push({
-              id: `blank-${sIdx}-${questions.length}`,
-              slideNumber: sIdx + 1,
-              type: 'blanks',
-              promptTitle: `Fill in the Blank`,
-              question: qText.trim(),
-              correctAnswer: ans,
-            });
-          }
-        });
-      }
-
-      // 2. Drag the Words / DragText
-      if (lib.startsWith('H5P.DragText') || lib.startsWith('H5P.DragQuestion')) {
-        const textField = params.textField || '';
-        const lines = textField.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
-        lines.forEach((line: string) => {
-          const parts = line.split(/(\*[^*]+\*)/g);
+          const parts = paragraph.split(/(\*[^*]+\*)/g);
           let qText = '';
           let ans = '';
+
           parts.forEach((p) => {
             if (p.startsWith('*') && p.endsWith('*')) {
               const raw = p.slice(1, -1);
-              ans = raw.split(':')[0].trim();
+              const [sol] = raw.split(':');
+              ans = sol.split('/')[0].trim();
               qText += ' _______ ';
             } else {
               qText += cleanHtml(p);
             }
           });
-          qText = qText.replace(/^\s*\[\d+\]\s*/, '').replace(/^\s*\(\d+\)\s*/, '').trim();
-          if (ans) {
-            questions.push({
-              id: `dragtext-${sIdx}-${questions.length}`,
-              slideNumber: sIdx + 1,
-              type: 'dragtext',
-              promptTitle: `Drag the Words Match`,
-              question: qText,
-              correctAnswer: ans,
-            });
+
+          qText = qText.replace(/^\s*\(\d+\)\s*/, '').trim();
+
+          questions.push({
+            id: `blank-${locationLabel}-${questions.length}`,
+            slideNumber: locationLabel,
+            type: 'blanks',
+            promptTitle: `Fill in the Blank`,
+            question: qText,
+            correctAnswer: ans,
+          });
+        }
+
+        if (!found && qStr.trim()) {
+          const parts = qStr.split(/(\*[^*]+\*)/g);
+          let qText = '';
+          let ans = '';
+          parts.forEach((p) => {
+            if (p.startsWith('*') && p.endsWith('*')) {
+              const raw = p.slice(1, -1);
+              const [sol] = raw.split(':');
+              ans = sol.split('/')[0].trim();
+              qText += ' _______ ';
+            } else {
+              qText += cleanHtml(p);
+            }
+          });
+          questions.push({
+            id: `blank-${locationLabel}-${questions.length}`,
+            slideNumber: locationLabel,
+            type: 'blanks',
+            promptTitle: `Fill in the Blank`,
+            question: qText.trim(),
+            correctAnswer: ans,
+          });
+        }
+      });
+    }
+
+    // 2. Drag the Words / DragText
+    if (lib.startsWith('H5P.DragText') || lib.startsWith('H5P.DragQuestion')) {
+      const textField = params.textField || '';
+      const lines = textField.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
+      lines.forEach((line: string) => {
+        const parts = line.split(/(\*[^*]+\*)/g);
+        let qText = '';
+        let ans = '';
+        parts.forEach((p) => {
+          if (p.startsWith('*') && p.endsWith('*')) {
+            const raw = p.slice(1, -1);
+            ans = raw.split(':')[0].trim();
+            qText += ' _______ ';
+          } else {
+            qText += cleanHtml(p);
           }
         });
-      }
+        qText = qText.replace(/^\s*\[\d+\]\s*/, '').replace(/^\s*\(\d+\)\s*/, '').trim();
+        if (ans) {
+          questions.push({
+            id: `dragtext-${locationLabel}-${questions.length}`,
+            slideNumber: locationLabel,
+            type: 'dragtext',
+            promptTitle: `Drag the Words Match`,
+            question: qText,
+            correctAnswer: ans,
+          });
+        }
+      });
+    }
 
-      // 2. Summary (Choose correct statement)
-      if (lib.startsWith('H5P.Summary')) {
-        const summaries: Array<{ summary: string[] }> = params.summaries || [];
-        summaries.forEach((item, itemIdx) => {
-          const statements = item.summary || [];
-          if (statements.length > 0) {
-            questions.push({
-              id: `summary-${sIdx}-${itemIdx}`,
-              slideNumber: sIdx + 1,
-              type: 'summary',
-              promptTitle: `Choose Correct Statement #${itemIdx + 1}`,
-              question: 'Which statement accurately describes the course concept?',
-              correctAnswer: cleanHtml(statements[0]),
-              distractors: statements.slice(1).map(cleanHtml),
-            });
-          }
-        });
-      }
+    // 3. Summary (Choose correct statement)
+    if (lib.startsWith('H5P.Summary')) {
+      const summaries: Array<{ summary: string[] }> = params.summaries || [];
+      summaries.forEach((item, itemIdx) => {
+        const statements = item.summary || [];
+        if (statements.length > 0) {
+          questions.push({
+            id: `summary-${locationLabel}-${itemIdx}`,
+            slideNumber: locationLabel,
+            type: 'summary',
+            promptTitle: `Choose Correct Statement #${itemIdx + 1}`,
+            question: 'Which statement accurately describes the course concept?',
+            correctAnswer: cleanHtml(statements[0]),
+            distractors: statements.slice(1).map(cleanHtml),
+          });
+        }
+      });
+    }
 
-      // 3. MultiChoice / SingleChoice
-      if (lib.startsWith('H5P.MultiChoice') || lib.startsWith('H5P.SingleChoiceSet')) {
-        const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
-        const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
-        const correct = answers.find((a) => a.correct);
-        const distractors = answers.filter((a) => !a.correct).map((a) => cleanHtml(a.text));
+    // 4. MultiChoice / SingleChoice
+    if (lib.startsWith('H5P.MultiChoice') || lib.startsWith('H5P.SingleChoiceSet')) {
+      const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
+      const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
+      const correct = answers.find((a) => a.correct);
+      const distractors = answers.filter((a) => !a.correct).map((a) => cleanHtml(a.text));
 
-        questions.push({
-          id: `mc-${sIdx}-${questions.length}`,
-          slideNumber: sIdx + 1,
-          type: 'multichoice',
-          promptTitle: `Multiple Choice`,
-          question: qText,
-          correctAnswer: correct ? cleanHtml(correct.text) : 'None marked',
-          distractors,
-        });
-      }
+      questions.push({
+        id: `mc-${locationLabel}-${questions.length}`,
+        slideNumber: locationLabel,
+        type: 'multichoice',
+        promptTitle: `Multiple Choice`,
+        question: qText,
+        correctAnswer: correct ? cleanHtml(correct.text) : 'None marked',
+        distractors,
+      });
+    }
 
-      // 4. True / False
-      if (lib.startsWith('H5P.TrueFalse')) {
-        const qText = cleanHtml(params.question || 'True or False');
-        const isTrue = String(params.correct).toLowerCase() === 'true';
+    // 5. True / False
+    if (lib.startsWith('H5P.TrueFalse')) {
+      const qText = cleanHtml(params.question || 'True or False');
+      const isTrue = String(params.correct).toLowerCase() === 'true';
 
-        questions.push({
-          id: `tf-${sIdx}-${questions.length}`,
-          slideNumber: sIdx + 1,
-          type: 'truefalse',
-          promptTitle: `True or False`,
-          question: qText,
-          correctAnswer: isTrue ? 'True' : 'False',
-          distractors: [isTrue ? 'False' : 'True'],
-        });
-      }
+      questions.push({
+        id: `tf-${locationLabel}-${questions.length}`,
+        slideNumber: locationLabel,
+        type: 'truefalse',
+        promptTitle: `True or False`,
+        question: qText,
+        correctAnswer: isTrue ? 'True' : 'False',
+        distractors: [isTrue ? 'False' : 'True'],
+      });
+    }
+  };
+
+  // Case A: Course Presentation Slides
+  const slides: any[] = pkg.content?.presentation?.slides || [];
+  slides.forEach((slide, sIdx) => {
+    (slide.elements || []).forEach((el: any) => {
+      extractFromAction(el.action, sIdx + 1);
     });
   });
+
+  // Case B: Interactive Video Checkpoints
+  const ivInteractions: any[] = pkg.content?.interactiveVideo?.interactions || pkg.content?.interactions || [];
+  ivInteractions.forEach((inter: any) => {
+    const fromSec = inter.duration?.from ?? 0;
+    const m = Math.floor(fromSec / 60);
+    const s = Math.floor(fromSec % 60);
+    const timeLabel = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    extractFromAction(inter.action, `Video @ ${timeLabel}`);
+  });
+
+  // Case C: QuestionSet
+  const qSet: any[] = pkg.content?.questions || [];
+  qSet.forEach((q: any, qIdx: number) => {
+    extractFromAction(q.action || q, `Question #${qIdx + 1}`);
+  });
+
+  // Case D: Top-level / Fallback Scan if still 0 questions found
+  if (questions.length === 0) {
+    extractFromAction({ library: pkg.mainLibrary, params: pkg.content }, 'Module Quiz');
+  }
 
   const handleCopyForAnki = async () => {
     const title = pkg.metadata.title || pkg.fileName;
     let text = `# ${title} - Exam Reviewer & Answer Key\n\n`;
 
     questions.forEach((q, idx) => {
-      text += `### Q${idx + 1}: ${q.question} (Slide ${q.slideNumber})\n`;
+      const locText = typeof q.slideNumber === 'number' ? `Slide ${q.slideNumber}` : q.slideNumber;
+      text += `### Q${idx + 1}: ${q.question} (${locText})\n`;
       text += `**✓ Correct Answer:** ${q.correctAnswer}\n`;
       if (q.distractors && q.distractors.length > 0) {
         text += `*Incorrect Options:* ${q.distractors.join(' | ')}\n`;
@@ -319,7 +344,7 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
                     </span>
                   </div>
                   <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
-                    Slide {q.slideNumber}
+                    {typeof q.slideNumber === 'number' ? `Slide ${q.slideNumber}` : q.slideNumber}
                   </span>
                 </div>
 

@@ -3,6 +3,8 @@ import { H5PPackage } from '../types/h5p';
 import { CoursePresentationRenderer } from './renderers/CoursePresentationRenderer';
 import { InteractiveBookRenderer } from './renderers/InteractiveBookRenderer';
 import { ColumnRenderer } from './renderers/ColumnRenderer';
+import { InteractiveVideoRenderer } from './renderers/InteractiveVideoRenderer';
+import { QuestionSetRenderer } from './renderers/QuestionSetRenderer';
 import { FallbackRenderer } from './renderers/FallbackRenderer';
 
 interface DocumentViewerProps {
@@ -22,6 +24,16 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({ pkg }) => {
       ) : mainLibrary.startsWith('H5P.InteractiveBook') ? (
         <InteractiveBookRenderer
           content={content as any}
+          assetMap={assetMap}
+        />
+      ) : mainLibrary.startsWith('H5P.InteractiveVideo') ? (
+        <InteractiveVideoRenderer
+          content={content}
+          assetMap={assetMap}
+        />
+      ) : mainLibrary.startsWith('H5P.QuestionSet') ? (
+        <QuestionSetRenderer
+          content={content}
           assetMap={assetMap}
         />
       ) : mainLibrary.startsWith('H5P.Column') ? (
