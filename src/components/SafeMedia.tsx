@@ -1,43 +1,168 @@
 import { useState } from "react";
 import { resolveAsset } from "../lib/h5pParser";
 import { externalUrl } from "../lib/security";
+import { ExternalLink, Video } from "lucide-react";
+
+export function extractYouTubeId(url: unknown): string | null {
+  if (typeof url !== "string") return null;
+  const cleaned = url.replace(/&amp;/g, "&").trim();
+  const match = cleaned.match(
+    /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i,
+  );
+  return match ? match[1] : null;
+}
+
 export function SafeMedia({
   path,
   assetMap,
   kind = "image",
   alt = "Package media",
+  title,
 }: {
   path?: string;
   assetMap: Map<string, string>;
   kind?: "image" | "video" | "audio";
   alt?: string;
+  title?: string;
 }) {
   const [allowed, setAllowed] = useState<string>();
+  const [loadError, setLoadError] = useState(false);
   const local = resolveAsset(path, assetMap);
-  const remote = externalUrl(path);
-  if (!local && remote && allowed !== remote)
+
+  // Normalize path format
+  let cleanPath = path;
+  if (typeof cleanPath === "string") {
+    cleanPath = cleanPath.replace(/&amp;/g, "&").trim();
+    if (cleanPath.startsWith("//")) {
+      cleanPath = `https:${cleanPath}`;
+    } else if (cleanPath.startsWith("http://")) {
+      cleanPath = cleanPath.replace(/^http:\/\//i, "https://");
+    } else if (/^(?:www\.)?(?:youtube\.com|youtu\.be)\//i.test(cleanPath)) {
+      cleanPath = `https://${cleanPath}`;
+    }
+  }
+
+  const remote = externalUrl(cleanPath);
+
+  // Privacy boundary: Require user opt-in before connecting to third-party hosts
+  if (!local && remote && allowed !== remote) {
+    let hostname = "external provider";
+    try {
+      hostname = new URL(remote).hostname;
+    } catch {
+      // fallback
+    }
+    const ytId = extractYouTubeId(remote);
+    const directWatchUrl = ytId ? `https://www.youtube.com/watch?v=${ytId}` : remote;
+
     return (
-      <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm">
-        <p>
-          External {kind} from {new URL(remote).hostname}. Loading it sends a
-          request to that host.
+      <div className="p-4 my-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-850/60 text-sm space-y-2.5">
+        <p className="text-zinc-700 dark:text-zinc-300">
+          External {kind} from {hostname}. Loading it sends a request to that host.
         </p>
-        <button
-          className="mt-2 underline font-semibold"
-          onClick={() => setAllowed(remote)}
-        >
-          Load external {kind}
-        </button>
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button
+            className="underline font-semibold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+            onClick={() => setAllowed(remote)}
+          >
+            Load external {kind}
+          </button>
+          {ytId && (
+            <a
+              href={directWatchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
+              title="Open video directly on YouTube in a new tab"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Watch on YouTube ↗</span>
+            </a>
+          )}
+        </div>
       </div>
     );
+  }
+
   const src = local || (allowed === remote ? remote : undefined);
-  if (!src)
+
+  if (!src) {
     return (
-      <p className="text-xs text-zinc-500 p-3">
-        Media unavailable or blocked. Answers remain available.
-      </p>
+      <div className="p-3 my-2 rounded-xl bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between gap-2">
+        <span>Media unavailable. Verified study notes & answers remain accessible below.</span>
+        {path && /^https?:\/\//i.test(path) && (
+          <a
+            href={path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 underline font-medium"
+          >
+            <span>Open Link</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
     );
-  if (kind === "image")
+  }
+
+  // 1. YouTube Video handling (supports all standard YouTube URLs)
+  const ytId = extractYouTubeId(src);
+  if (ytId) {
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0&enablejsapi=1`;
+    const directWatchUrl = `https://www.youtube.com/watch?v=${ytId}`;
+
+    return (
+      <div className="w-full my-3 space-y-2">
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          <iframe
+            src={embedUrl}
+            title={title || alt || "YouTube Video"}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="w-full h-full border-0"
+            onError={() => setLoadError(true)}
+          />
+        </div>
+
+        {/* Action bar with direct YouTube link & helper info */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-sans">
+            <Video className="w-3.5 h-3.5 text-red-500" />
+            <span>
+              {title ? `${title} • ` : ""}YouTube Video
+            </span>
+          </div>
+
+          <a
+            href={directWatchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold shadow-xs transition-colors"
+            title="Open video directly on YouTube in a new tab"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Watch on YouTube ↗</span>
+          </a>
+        </div>
+
+        {loadError && (
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+            <span>Video playback restricted in embed? Click "Watch on YouTube" to open directly.</span>
+            <a
+              href={directWatchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-bold"
+            >
+              Open on YouTube
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (kind === "image") {
     return (
       <img
         src={src}
@@ -47,39 +172,36 @@ export function SafeMedia({
         loading="lazy"
       />
     );
-  if (kind === "audio")
-    return <audio controls preload="none" src={src} className="w-full" />;
-  if (remote && src === remote) {
-    const u = new URL(remote);
-    const id =
-      u.hostname === "youtu.be"
-        ? u.pathname.slice(1)
-        : [
-              "www.youtube.com",
-              "youtube.com",
-              "www.youtube-nocookie.com",
-            ].includes(u.hostname)
-          ? u.searchParams.get("v") || u.pathname.split("/").pop()
-          : undefined;
-    if (id && /^[\w-]{11}$/.test(id))
-      return (
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${id}`}
-          title={alt}
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-          allow="fullscreen; encrypted-media"
-          allowFullScreen
-          className="w-full aspect-video rounded-xl"
-        />
-      );
   }
+
+  if (kind === "audio") {
+    return <audio controls preload="none" src={src} className="w-full my-2" />;
+  }
+
+  // 3. HTML5 Video
   return (
-    <video
-      controls
-      preload="none"
-      src={src}
-      className="w-full max-h-[600px] rounded-xl"
-    />
+    <div className="w-full my-3 space-y-2">
+      <video
+        controls
+        preload="metadata"
+        src={src}
+        className="w-full max-h-[600px] rounded-xl bg-black"
+      >
+        Your browser does not support the video tag.
+      </video>
+      {remote && (
+        <div className="flex justify-end">
+          <a
+            href={remote}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <span>Open source video file</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+    </div>
   );
 }

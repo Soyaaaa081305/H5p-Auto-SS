@@ -2,7 +2,8 @@ import React from "react";
 import type { H5PElementAction } from "../../types/h5p";
 import { extractNode } from "../../lib/extraction";
 import { safeHtml, externalUrl } from "../../lib/security";
-import { SafeMedia } from "../SafeMedia";
+import { SafeMedia, extractYouTubeId } from "../SafeMedia";
+import { ExternalLink } from "lucide-react";
 import { DragTargetPreview } from "../DragTargetPreview";
 import { AnswerCards } from "../AnswerCards";
 import { CoursePresentationRenderer } from "./CoursePresentationRenderer";
@@ -31,14 +32,19 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
     return <InteractiveVideoRenderer content={p} assetMap={assetMap} />;
   if (library === "H5P.Image")
     return <SafeMedia path={p.file?.path} alt={p.alt} assetMap={assetMap} />;
-  if (library === "H5P.Video" || library === "H5P.Audio")
+  if (library === "H5P.Video" || library === "H5P.Audio") {
+    const list = p.sources || p.files || p.video?.files || p.video?.sources || [];
+    const first = Array.isArray(list) ? list[0] : list;
+    const mediaPath = typeof first === "string" ? first : first?.path || first?.url;
     return (
       <SafeMedia
-        path={(p.sources || p.files)?.[0]?.path}
+        path={mediaPath}
         kind={library === "H5P.Video" ? "video" : "audio"}
         assetMap={assetMap}
+        title={p.title}
       />
     );
+  }
   if (["H5P.Text", "H5P.AdvancedText", "H5P.Table"].includes(library))
     return (
       <div
@@ -47,21 +53,45 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
       />
     );
   if (library === "H5P.Link") {
-    const raw = p.linkWidget?.url || p.url || "";
-    const url = externalUrl(
-      /^https?:/.test(raw) ? raw : `${p.linkWidget?.protocol || ""}${raw}`,
-    );
-    return url ? (
+    let raw = p.linkWidget?.url || p.url || "";
+    if (typeof raw === "string") {
+      raw = raw.replace(/&amp;/g, "&").trim();
+      const proto = p.linkWidget?.protocol || "";
+      if (proto && !raw.startsWith("http://") && !raw.startsWith("https://")) {
+        raw = `${proto}${raw}`;
+      }
+      if (raw.startsWith("//")) {
+        raw = `https:${raw}`;
+      } else if (raw.startsWith("http://")) {
+        raw = raw.replace(/^http:\/\//i, "https://");
+      } else if (!/^https?:\/\//i.test(raw)) {
+        raw = `https://${raw}`;
+      }
+    }
+    const safeLink = externalUrl(raw);
+    const ytId = safeLink ? extractYouTubeId(safeLink) : null;
+    const isCanva = safeLink && safeLink.includes("canva.com");
+
+    return safeLink ? (
       <a
-        href={url}
+        href={safeLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="underline text-sm"
+        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] ${
+          ytId
+            ? "bg-red-600 hover:bg-red-500 text-white"
+            : isCanva
+              ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+              : "bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+        }`}
       >
-        {p.title || "Open external resource"}
+        <ExternalLink className="w-3.5 h-3.5" />
+        <span>
+          {p.title || (ytId ? "Watch on YouTube" : isCanva ? "Open in Canva" : "Open Link")}
+        </span>
       </a>
     ) : (
-      <p>External link unavailable or blocked.</p>
+      <span className="text-xs text-zinc-400 font-mono">Link unavailable</span>
     );
   }
   if (library === "H5P.QuestionSet")

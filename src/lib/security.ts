@@ -40,7 +40,16 @@ export function safeHtml(value: unknown): string {
       "blockquote",
       "pre",
       "code",
+      "a",
     ],
-    ALLOWED_ATTR: ["colspan", "rowspan"],
+    ALLOWED_ATTR: ["href", "target", "rel", "title", "class", "colspan", "rowspan"],
   });
 }
+
+// Ensure all allowed links open safely in a new tab without opener vulnerabilities
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "A" && node.hasAttribute("href")) {
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noopener noreferrer");
+  }
+});

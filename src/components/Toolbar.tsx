@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { H5PPackage } from '../types/h5p';
 import { exportSlidesToPdf, exportBatchToPdf } from '../lib/pdfExporter';
 import { externalUrl } from '../lib/security';
+import { extractYouTubeId } from './SafeMedia';
 import { ReviewerModal } from './ReviewerModal';
 import {
   Download,
@@ -96,8 +97,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const hasSlides = Boolean(currentPkg.content?.presentation?.slides?.length);
   const moduleDescription = getModuleDescription(currentPkg);
 
-  // Extract Canva / external presentation link from active module
+  // Extract Canva / external presentation link and YouTube link from active module
   let canvaUrl: string | null = null;
+  let youtubeUrl: string | null = null;
+
+  // 1. Check Interactive Video video sources
+  const ivSources: any[] =
+    currentPkg.content?.interactiveVideo?.video?.files ||
+    currentPkg.content?.interactiveVideo?.video?.sources ||
+    currentPkg.content?.interactiveVideo?.files ||
+    currentPkg.content?.interactiveVideo?.sources ||
+    [];
+  for (const s of ivSources) {
+    const p = typeof s === 'string' ? s : s?.path || s?.url;
+    const yId = extractYouTubeId(p);
+    if (yId) {
+      youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
+      break;
+    }
+  }
+
+  // 2. Check Course Presentation Slides
   const slides: any[] = currentPkg.content?.presentation?.slides || [];
   slides.forEach((s) => {
     (s.elements || []).forEach((el: any) => {
@@ -108,7 +128,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           u = `${proto}${u}`;
         }
         u = u.replace(/&amp;/g, '&');
-        if (u) canvaUrl = externalUrl(u) || null;
+        const yId = extractYouTubeId(u);
+        if (yId && !youtubeUrl) {
+          youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
+        }
+        if (u.includes('canva.com') && !canvaUrl) {
+          canvaUrl = externalUrl(u) || null;
+        } else if (!canvaUrl && externalUrl(u)) {
+          canvaUrl = externalUrl(u) || null;
+        }
+      } else if (el.action?.library?.includes('Video')) {
+        const src = (el.action.params?.sources || el.action.params?.files)?.[0]?.path;
+        const yId = extractYouTubeId(src);
+        if (yId && !youtubeUrl) {
+          youtubeUrl = `https://www.youtube.com/watch?v=${yId}`;
+        }
       }
     });
   });
@@ -241,6 +275,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <BookOpen className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>Answers</span>
           </button>
+
+          {/* Prominent YouTube Link if detected */}
+          {youtubeUrl && (
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-semibold shadow-2xs transition-colors"
+              title="Open video directly on YouTube"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Watch on YouTube</span>
+            </a>
+          )}
 
           {/* Prominent Canva Link if detected */}
           {canvaUrl && (
