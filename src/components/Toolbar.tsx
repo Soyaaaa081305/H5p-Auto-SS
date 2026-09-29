@@ -155,7 +155,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <div className="no-print bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20 transition-colors">
-      {isExporting && <button className="text-sm underline p-2" onClick={() => exportController.current?.abort()}>Cancel export</button>}
       {/* Hidden file input for adding more modules */}
       <input
         ref={addFileInputRef}
@@ -355,6 +354,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               </>
             )}
           </button>
+
+          {/* Cancel Export button if actively exporting */}
+          {isExporting && (
+            <button
+              type="button"
+              onClick={() => exportController.current?.abort()}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 text-xs font-semibold shadow-2xs transition-colors"
+              title="Cancel export"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Cancel</span>
+            </button>
+          )}
 
           {/* If single module, show "+ Add Module" to encourage playlist usage */}
           {packages.length === 1 && (
