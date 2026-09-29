@@ -175,8 +175,28 @@ export const ReviewerModal: React.FC<ReviewerModalProps> = ({ pkg, isOpen, onClo
       });
     }
 
-    // 4. MultiChoice / SingleChoice
-    if (lib.startsWith('H5P.MultiChoice') || lib.startsWith('H5P.SingleChoiceSet')) {
+    // 4. SingleChoiceSet (mini-quiz battery)
+    if (lib.startsWith('H5P.SingleChoiceSet')) {
+      const choices: Array<{ question: string; answers: string[] }> = params.choices || [];
+      choices.forEach((c, cIdx) => {
+        const qText = cleanHtml(c.question || `Question #${cIdx + 1}`);
+        const correct = cleanHtml(c.answers?.[0] || '');
+        const distractors = (c.answers?.slice(1) || []).map(cleanHtml);
+
+        questions.push({
+          id: `scs-${locationLabel}-${cIdx}`,
+          slideNumber: locationLabel,
+          type: 'multichoice',
+          promptTitle: `Single Choice (${cIdx + 1}/${choices.length})`,
+          question: qText,
+          correctAnswer: correct,
+          distractors,
+        });
+      });
+    }
+
+    // 5. MultiChoice
+    if (lib.startsWith('H5P.MultiChoice')) {
       const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
       const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
       const correct = answers.find((a) => a.correct);

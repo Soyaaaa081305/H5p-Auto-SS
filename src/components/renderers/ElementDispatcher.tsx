@@ -5,6 +5,7 @@ import { BlanksRenderer } from './BlanksRenderer';
 import { SummaryRenderer } from './SummaryRenderer';
 import { MultiChoiceRenderer } from './MultiChoiceRenderer';
 import { DragTextRenderer } from './DragTextRenderer';
+import { SingleChoiceSetRenderer } from './SingleChoiceSetRenderer';
 import { ExternalLink } from 'lucide-react';
 
 interface ElementDispatcherProps {
@@ -37,17 +38,21 @@ export const ElementDispatcher: React.FC<ElementDispatcherProps> = ({
     return <SummaryRenderer params={params} />;
   }
 
-  // 4. Multiple choice / Single choice / True False
+  // 4. Single Choice Set (mini-quiz battery)
+  if (library.startsWith('H5P.SingleChoiceSet')) {
+    return <SingleChoiceSetRenderer params={params} />;
+  }
+
+  // 5. Multiple choice / True False
   if (
     library.startsWith('H5P.MultiChoice') ||
-    library.startsWith('H5P.SingleChoiceSet') ||
     library.startsWith('H5P.TrueFalse')
   ) {
     return <MultiChoiceRenderer params={params} quizMode="study" />;
   }
 
-  // 3. Text
-  if (library.startsWith('H5P.Text')) {
+  // 6. Text & AdvancedText
+  if (library.startsWith('H5P.Text') || library.startsWith('H5P.AdvancedText')) {
     const textHtml = params.text || '';
     return (
       <div

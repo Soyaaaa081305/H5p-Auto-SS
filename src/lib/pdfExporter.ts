@@ -336,6 +336,137 @@ function renderSummaryOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   });
 }
 
+function renderSingleChoiceSetOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
+  const choices: Array<{ question: string; answers: string[] }> = params.choices || [];
+  if (choices.length === 0) {
+    return renderMultiChoiceOnCanvas(ctx, params);
+  }
+
+  // Slide Background
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Inner Container
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.fillRect(60, 50, 1800, 980);
+  ctx.strokeRect(60, 50, 1800, 980);
+
+  // Header Title
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Quiz: Single Choice Set', 100, 120);
+
+  // Subtitle / Prompt
+  ctx.fillStyle = '#64748b';
+  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(`All questions and verified answers (${choices.length} items • Verified answers marked with ✓)`, 100, 160);
+
+  // Divider line
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(100, 185);
+  ctx.lineTo(1820, 185);
+  ctx.stroke();
+
+  // If 1-4 questions, 1 column layout
+  if (choices.length <= 4) {
+    const cardHeight = Math.min(180, Math.floor(780 / choices.length) - 20);
+    choices.forEach((c, idx) => {
+      const cardY = 210 + idx * (cardHeight + 20);
+      const qText = cleanHtml(c.question || `Question ${idx + 1}`);
+      const correctAns = cleanHtml(c.answers?.[0] || '');
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(100, cardY, 1720, cardHeight);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(100, cardY, 1720, cardHeight);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Question ${idx + 1}`, 130, cardY + 36);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, qText, 280, cardY + 36, 1500, 24);
+
+      ctx.fillStyle = '#ecfdf5';
+      ctx.fillRect(130, cardY + 70, 1660, 48);
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(130, cardY + 70, 1660, 48);
+
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('✓ CORRECT ANSWER:', 155, cardY + 100);
+
+      ctx.fillStyle = '#065f46';
+      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, correctAns, 380, cardY + 100, 1380, 22);
+    });
+    return;
+  }
+
+  // 5 to 10 questions: 2 columns of up to 5 questions each
+  const leftX = 100;
+  const rightX = 970;
+  const colWidth = 850;
+  const cardHeight = 142;
+
+  choices.slice(0, 10).forEach((c, idx) => {
+    const isRight = idx >= 5;
+    const colX = isRight ? rightX : leftX;
+    const rowIdx = isRight ? idx - 5 : idx;
+    const cardY = 210 + rowIdx * (cardHeight + 14);
+
+    const qText = cleanHtml(c.question || `Question ${idx + 1}`);
+    const correctAns = cleanHtml(c.answers?.[0] || '');
+    const wrongAns = cleanHtml(c.answers?.[1] || '');
+
+    // Card background
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(colX, cardY, colWidth, cardHeight);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
+
+    // Question number & title
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Q${idx + 1}:`, colX + 16, cardY + 26);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wrapText(ctx, qText, colX + 50, cardY + 26, colWidth - 70, 18);
+
+    // Correct statement box (green)
+    ctx.fillStyle = '#ecfdf5';
+    ctx.fillRect(colX + 16, cardY + 48, colWidth - 32, 46);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(colX + 16, cardY + 48, colWidth - 32, 46);
+
+    ctx.fillStyle = '#059669';
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    wrapText(ctx, `✓ ${correctAns}`, colX + 26, cardY + 74, colWidth - 52, 17);
+
+    // Distractor box (muted/gray)
+    if (wrongAns) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(colX + 16, cardY + 100, colWidth - 32, 34);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(colX + 16, cardY + 100, colWidth - 32, 34);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      wrapText(ctx, `✗ Other: ${wrongAns}`, colX + 26, cardY + 122, colWidth - 52, 16);
+    }
+  });
+}
+
 function renderMultiChoiceOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
   const question = cleanHtml(params.question || params.text || 'Multiple Choice Question');
   const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
@@ -501,7 +632,9 @@ async function renderSlideToCanvas(
       renderDragTextOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.Summary')) {
       renderSummaryOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.MultiChoice') || library.startsWith('H5P.SingleChoiceSet')) {
+    } else if (library.startsWith('H5P.SingleChoiceSet')) {
+      renderSingleChoiceSetOnCanvas(ctx, params);
+    } else if (library.startsWith('H5P.MultiChoice')) {
       renderMultiChoiceOnCanvas(ctx, params);
     } else if (library.startsWith('H5P.TrueFalse')) {
       renderTrueFalseOnCanvas(ctx, params);
@@ -520,7 +653,7 @@ async function renderSlideToCanvas(
           console.warn('Could not draw element image', e);
         }
       }
-    } else if (library.startsWith('H5P.Text')) {
+    } else if (library.startsWith('H5P.Text') || library.startsWith('H5P.AdvancedText')) {
       const txt = cleanHtml(params.text || '');
       if (txt) {
         const elX = ((el.x ?? 5) / 100) * 1920;
@@ -588,7 +721,17 @@ export async function exportQuestionsToPdf(
           });
         }
       });
-    } else if (lib.startsWith('H5P.MultiChoice') || lib.startsWith('H5P.SingleChoiceSet')) {
+    } else if (lib.startsWith('H5P.SingleChoiceSet')) {
+      const choices: Array<{ question: string; answers: string[] }> = params.choices || [];
+      choices.forEach((c, idx) => {
+        questions.push({
+          title: `Single Choice #${idx + 1}`,
+          question: cleanHtml(c.question || `Question #${idx + 1}`),
+          answer: cleanHtml(c.answers?.[0] || ''),
+          distractors: (c.answers?.slice(1) || []).map(cleanHtml)
+        });
+      });
+    } else if (lib.startsWith('H5P.MultiChoice')) {
       const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
       const answers: any[] = params.answers || [];
       const correct = answers.find(a => a.correct);

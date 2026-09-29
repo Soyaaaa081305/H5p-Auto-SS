@@ -116,74 +116,47 @@ export const CoursePresentationRenderer: React.FC<CoursePresentationRendererProp
       '#ffffff';
 
     const elements = slide.elements || [];
-    const hasBackground = Boolean(bgUrl);
-
-    const hasMajorQuiz = elements.some(
-      (el) =>
-        el.action?.library.startsWith('H5P.Blanks') ||
-        el.action?.library.startsWith('H5P.Summary') ||
-        el.action?.library.startsWith('H5P.QuestionSet') ||
-        el.action?.library.startsWith('H5P.MultiChoice') ||
-        el.action?.library.startsWith('H5P.SingleChoiceSet') ||
-        el.action?.library.startsWith('H5P.TrueFalse')
-    );
 
     return (
       <div
-        className="w-full aspect-[16/9] overflow-hidden select-none relative"
+        className="w-full aspect-[16/9] overflow-hidden select-none relative bg-white dark:bg-zinc-900 transition-colors"
         style={{ backgroundColor: bgColor }}
       >
-        {hasMajorQuiz && !hasBackground ? (
-          <div className="w-full h-full flex flex-col overflow-hidden bg-white">
-            {elements.map((el, elIdx) => (
-              <div key={elIdx} className="w-full h-full">
-                <ElementDispatcher
-                  action={el.action}
-                  assetMap={assetMap}
-                  inOverlay={false}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="relative w-full h-full bg-zinc-950">
-            {bgUrl && (
-              <img
-                src={bgUrl}
-                alt={`Slide ${slideIdx + 1}`}
-                className="absolute inset-0 w-full h-full object-contain"
-              />
-            )}
-            {elements.map((el, elIdx) => {
-              if (el.action?.library?.includes('Link')) return null;
-
-              const left = `${el.x}%`;
-              const top = `${el.y}%`;
-              const width = `${el.width}%`;
-              const height = `${el.height}%`;
-
-              return (
-                <div
-                  key={elIdx}
-                  className="absolute"
-                  style={{
-                    left,
-                    top,
-                    width,
-                    height,
-                    zIndex: 10 + elIdx,
-                  }}
-                >
-                  <ElementDispatcher
-                    action={el.action}
-                    assetMap={assetMap}
-                    inOverlay={true}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        {bgUrl && (
+          <img
+            src={bgUrl}
+            alt={`Slide ${slideIdx + 1}`}
+            className="absolute inset-0 w-full h-full object-contain"
+          />
         )}
+        {elements.map((el, elIdx) => {
+          if (el.action?.library?.includes('Link')) return null;
+
+          const left = `${el.x ?? 0}%`;
+          const top = `${el.y ?? 0}%`;
+          const width = `${el.width ?? 100}%`;
+          const height = `${el.height ?? 100}%`;
+
+          return (
+            <div
+              key={elIdx}
+              className="absolute overflow-y-auto no-scrollbar"
+              style={{
+                left,
+                top,
+                width,
+                height,
+                zIndex: 10 + elIdx,
+              }}
+            >
+              <ElementDispatcher
+                action={el.action}
+                assetMap={assetMap}
+                inOverlay={true}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   };
