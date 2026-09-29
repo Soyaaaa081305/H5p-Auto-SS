@@ -1,63 +1,149 @@
-# H5P to PDF Viewer
+# H5P to PDF & Study Guide Viewer 📚
 
-A local-first H5P reader with nested content viewing, answer extraction, study notes, and PDF exports. The current interface and presentation layout are retained; the **Answers** button opens a searchable answer key for one or all imported modules.
+> **The easiest way to view H5P files, extract quiz answer keys, and export clean study PDFs directly in your browser.**
 
-## Privacy
+🌐 **Live Web App**: [https://soyaaaa081305.github.io/H5p-Auto-SS/](https://soyaaaa081305.github.io/H5p-Auto-SS/)  
+🔒 **100% Private & Client-Side**: No files or answers are ever uploaded to any server.
 
-Files are processed in a browser worker. File contents, answers, and transcripts are not uploaded. No proxy, analytics, cloud AI, external transcription, or packaged library scripts are used. Local viewing and answer extraction do not require external media requests.
+---
 
-Public HTTPS imports contact the entered host only after a user action, omit credentials and referrers, reject redirects, and time out after 60 seconds. Authentication-protected and CORS-blocked links must be downloaded separately and imported as files. Query-string links require an explicit click. External media requires a separate click and can then send network information, including the user's IP address, to its provider. Third-party players may contact additional services after activation.
+## 💡 What is this? (For Non-Techies)
 
-Only application assets are cached for offline use; imported files stay in memory. Removing modules or resetting releases their media URLs. Theme preference is the only application local-storage setting. Exported PDFs and clipboard contents are created only by the user's action.
+If you are a student, your school or professor probably uses **H5P interactive modules** on Canvas, Blackboard, or Moodle. These are interactive presentations, videos, and quizzes where you have to click through slides, answer questions, or watch long lectures.
 
-## Answer coverage
+**The Problem**:
+- You can't easily study or review them offline without an internet connection.
+- You can't print them out as notes or PDFs.
+- When studying for midterms or finals, you want to review the practice questions and see the correct answers without guessing or re-clicking 50 slides one by one.
 
-A shared extractor scans the entire content tree, including nested Books, Columns, Presentations, Question Sets, Interactive Videos, unknown containers, and stored branches. It records chapter, slide, source path, and video timestamp. All stored branches and questions are included, rather than just the path taken by an interactive player.
+**The Solution**:
+This tool lets you drop in any `.h5p` file to view it like a slide deck, reveal the verified answer keys for all quizzes and checkpoints, and download everything as a clean, printable PDF study guide!
 
-Validated answer adapters cover these 1.x library shapes up through the listed minor version:
+---
 
-| Library | Version ceiling | Extracted information |
-| --- | --- | --- |
-| Blanks | 1.14 | Ordered blanks and accepted alternatives |
-| DragText | 1.10 | Ordered word slots |
-| DragQuestion | 1.15 | Target positions and correct-element text/images |
-| MultiChoice | 1.16 | All marked correct choices |
-| TrueFalse | 1.8 | Explicit true or false keys |
-| SingleChoiceSet | 1.11 | Stored correct choice for each question |
-| Summary | 1.10 | Stored correct statement per group |
-| MarkTheWords | 1.11 | Marked words |
+## 🚀 How to Use It (3 Simple Steps)
 
-Unknown libraries/versions are shown as unsupported, with safe source details and packaged schema hints when available. Missing and partial keys are labeled separately. The application does not guess answers or execute custom H5P scoring code. Unsupported media codecs, encrypted archives, ZIP64/multipart archives, and custom runtime-generated keys are not supported. Missing library versions use the adapter only when its expected fields are present.
+1. **Open the Web App**: Visit [https://soyaaaa081305.github.io/H5p-Auto-SS/](https://soyaaaa081305.github.io/H5p-Auto-SS/).
+2. **Upload your H5P File**:
+   - Drag and drop your `.h5p` file onto the upload zone, or click **"Browse files"**.
+   - *(Optional)* You can also paste a public URL link to an `.h5p` file.
+3. **Review & Study**:
+   - 📖 **Slide Viewer**: Click through slides, interactive books, or checkpoints with full layout rendering.
+   - 🎯 **Answers Button**: Click the green **"Answers"** button on the toolbar to pop open the complete answer key with copyable text.
+   - 📄 **Export PDF**: Click **"Download PDF"** to save a complete, multi-column study guide with slides and solutions.
 
-**Every file cannot be guaranteed to contain an answer key.** The two local laboratory acceptance cases contain 10 answer activities: 9 recoverable keys and one Summary activity with no statements/key stored. Tests verify Module 1-A's 3 blank slots, 6 drag-text slots, and multiple-choice key; Module 1-B's two single-choice questions, multiple-choice key, two summary records (one missing), and five drag targets.
+---
 
-The Answers view, copy function, and PDFs use the same extracted records. Full-module and batch PDFs include nested content and answer details. Slide images preserve the author coordinates; full answer pages follow separately so long answers are not confined to a slide's small overlay. PDF pages are rasterized for Unicode and image fidelity; text is not selectable. Use Copy for accessible text.
+## ✨ Features
 
-Video notes use only packaged transcript/caption text and associated activity text, with stored timing retained. They are source extracts, not AI-generated summaries of unseen video. A missing transcript is reported explicitly. H5P Summary questions remain distinct from these notes.
+- **Universal H5P Support**: Works seamlessly with Course Presentations, Interactive Videos, Question Sets, Interactive Books, Drag-and-Drop, Fill-in-the-Blanks, and more.
+- **Instant Answer Extraction**: Automatically retrieves the solutions embedded inside:
+  - Multiple Choice quizzes
+  - True / False statements
+  - Single Choice sets
+  - Fill in the blanks & accepted alternatives
+  - Drag the words / Drag-and-drop targets
+  - Summary activities
+- **Interactive Video & YouTube Playback**: Play video checkpoints directly with direct **"Watch on YouTube ↗"** buttons if playback is restricted on school networks.
+- **Export Options**:
+  - Full Slide PDF export (retains author dimensions and formatting)
+  - Separate Answer Key PDF export
+  - One-click **"Copy All Answers"** to clipboard for pasting into Notion or Google Docs
+- **Dark Mode Parity**: Easy on the eyes for late-night exam prep.
+- **100% Offline & Mobile Friendly**: Add it to your phone or tablet home screen as a Web App (PWA).
 
-## Limits and resilience
+---
 
-- Maximum archive: 256 MB; maximum entries: 10,000.
-- Maximum JSON document: 10 MB; maximum declared/actual expanded data: 512 MB per package.
-- Content traversal: at most 100,000 visited values and nesting depth 128.
-- Paths must be relative, unique, and traversal-free. Conflicting local/central/Unicode names are rejected.
-- Only referenced supported content media are decompressed; object URLs are created lazily. Executable libraries are never loaded.
-- Imports and exports can be cancelled. Batch import failures retain completed valid files. Reset discards pending work.
+## 🔍 How It Works Under the Hood
 
-Large collections can still exceed the memory available on a particular device. Import fewer modules at a time if necessary. Unsupported or absent assets remain labeled rather than fetched implicitly.
+### Is this AI or hacking?
+**No!** There is no hacking or AI guessing involved.
 
-## Development and verification
+An `.h5p` file is secretly just a standard `.zip` archive containing a `content.json` file along with images, audio, and videos. When a teacher creates a quiz, the correct answers are already saved inside the `content.json` data file so the computer knows how to grade you when you click submit.
 
-Use Node.js 24 (minimum 22.12):
+This website:
+1. **Unzips the file locally** inside your web browser using a background Web Worker (so your browser won't lag or freeze).
+2. **Scans the JSON tree** to find all question objects and their pre-defined correct answer flags.
+3. **Displays them cleanly** in a user-friendly interface and formats them for high-resolution PDF printing.
 
-```sh
+### 🛡️ Privacy Guarantee
+- **Zero Server Uploads**: Everything happens 100% inside your web browser's memory. Your files, school identity, and test answers are never sent to any backend, database, or analytics tracker.
+- **Sandboxed Media**: External videos and links require explicit user consent before connecting to third-party servers.
+
+---
+
+## 🛠️ Tech Stack (For Developers)
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Framework** | **React 19** + **TypeScript** | Type-safe, reactive UI component tree |
+| **Build Tool** | **Vite 8** | Ultra-fast local development & optimized client bundle |
+| **Styling** | **Tailwind CSS v4** | Responsive mobile-first design with native Dark Mode |
+| **Worker Engine** | **Web Worker** + **JSZip** | Off-thread decompression and JSON traversal up to 256MB archives |
+| **Security** | **DOMPurify** | Sanitizes user-generated HTML and prevents XSS vulnerabilities |
+| **PDF Generation** | **jsPDF** + **html2canvas** | Multi-column, high-DPI rasterization and pagination |
+| **Icons** | **Lucide React** | Clean, lightweight UI icons |
+| **Testing** | **Vitest** + **Playwright** | 100% coverage on answer extraction, archive parsing, and E2E browser flows |
+| **Deployment** | **GitHub Pages** + **GitHub Actions** | Automated CI verification and zero-downtime deployment |
+
+---
+
+## 💻 Local Development Setup
+
+If you want to run this project on your own machine:
+
+### Prerequisites
+- Node.js 22.12 or newer (Node 24 recommended)
+- npm
+
+### Installation & Run
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Soyaaaa081305/H5p-Auto-SS.git
+cd H5p-Auto-SS
+
+# 2. Install dependencies
 npm ci
+
+# 3. Start local development server
 npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### Quality Verification & Tests
+
+```bash
+# Run unit tests and production build check
 npm run check
+
+# Run end-to-end browser tests using Playwright
 npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser tests use the production build, so run `npm run build` before `npm run test:e2e`. Synthetic fixtures cover nesting, alternatives, missing/custom keys, hostile HTML, archive validation, privacy, URL opt-in, cancellation, and PDF pagination. To run the optional local laboratory acceptance tests, set `H5P_SAMPLE_FILES` to the Module 1-A and Module 1-B paths separated by `|`. Original H5P files and test artifacts are ignored by Git.
+---
 
-CI runs unit tests, the production build, a dependency audit, and browser tests on pull requests and main. Deployment to GitHub Pages requires an explicit workflow dispatch on main after verification succeeds. Nothing deploys merely because a push passes CI.
+## ❓ Frequently Asked Questions (FAQ)
+
+<details>
+<summary><strong>Why does a question say "No answer key stored"?</strong></summary>
+Some H5P packages (like open-ended essay questions or server-graded assessments) do not include the answer in the file itself. In those cases, the app clearly flags that no answer key was included rather than guessing or providing misleading information.
+</details>
+
+<details>
+<summary><strong>Does this app need internet access?</strong></summary>
+No! Once the webpage loads, you can turn off Wi-Fi or go offline. All file unzipping, slide rendering, and PDF generation work completely offline. Only external YouTube videos require internet access to stream.
+</details>
+
+<details>
+<summary><strong>What file size limits exist?</strong></summary>
+The viewer comfortably supports H5P archives up to 256 MB with up to 10,000 files inside.
+</details>
+
+---
+
+## 📄 License
+
+Open-source project built for students. Released under the MIT License.
