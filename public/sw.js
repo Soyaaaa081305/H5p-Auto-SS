@@ -1,4 +1,4 @@
-const CACHE_NAME = "h5p-pdf-shell-v2";
+const CACHE_NAME = "h5p-pdf-shell-v3";
 const root = new URL("./", self.location.href);
 const shell = ["index.html", "manifest.webmanifest", "icon.svg"].map(
   (p) => new URL(p, root).href,

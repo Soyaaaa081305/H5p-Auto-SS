@@ -15,6 +15,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register('./sw.js')
       .then((reg) => {
+        reg.update();
         console.log('H5P to PDF PWA service worker registered:', reg.scope);
       })
       .catch((err) => {

@@ -34,8 +34,13 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
     return <SafeMedia path={p.file?.path} alt={p.alt} assetMap={assetMap} />;
   if (library === "H5P.Video" || library === "H5P.Audio") {
     const list = p.sources || p.files || p.video?.files || p.video?.sources || [];
-    const first = Array.isArray(list) ? list[0] : list;
-    const mediaPath = typeof first === "string" ? first : first?.path || first?.url;
+    const arr = Array.isArray(list) ? list : [list];
+    const ytSource = arr.find((s: any) => {
+      const sp = typeof s === "string" ? s : s?.path || s?.url;
+      return Boolean(extractYouTubeId(sp));
+    });
+    const chosen = ytSource || arr[0];
+    const mediaPath = typeof chosen === "string" ? chosen : chosen?.path || chosen?.url;
     return (
       <SafeMedia
         path={mediaPath}
