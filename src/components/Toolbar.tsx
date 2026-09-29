@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { H5PPackage } from '../types/h5p';
 import { exportSlidesToPdf, exportBatchToPdf } from '../lib/pdfExporter';
+import { externalUrl } from '../lib/security';
 import { ReviewerModal } from './ReviewerModal';
 import {
   Download,
@@ -23,25 +24,11 @@ interface ToolbarProps {
 }
 
 function getModuleBadge(pkg: H5PPackage): string {
-  const slides = pkg.content?.presentation?.slides;
-  if (slides && slides.length > 0) return `${slides.length}`;
-  const videoInteractions = pkg.content?.interactiveVideo?.interactions;
-  if (videoInteractions && videoInteractions.length > 0) return `${videoInteractions.length} cp`;
-  if (pkg.content?.interactiveVideo) return 'Video';
-  const questions = pkg.content?.questions;
-  if (questions && questions.length > 0) return `${questions.length} q`;
-  return 'H5P';
+  return `${pkg.report.answers.length} q`;
 }
-
 function getModuleDescription(pkg: H5PPackage): string {
-  const slides = pkg.content?.presentation?.slides;
-  if (slides && slides.length > 0) return `${slides.length} slides`;
-  const videoInteractions = pkg.content?.interactiveVideo?.interactions;
-  if (videoInteractions && videoInteractions.length > 0) return `${videoInteractions.length} checkpoints • Interactive Video`;
-  if (pkg.content?.interactiveVideo) return 'Interactive Video';
-  const questions = pkg.content?.questions;
-  if (questions && questions.length > 0) return `${questions.length} questions • Quiz Set`;
-  return 'Interactive Module';
+  const recovered = pkg.report.answers.filter(a => a.status === 'extracted').length;
+  return `${recovered}/${pkg.report.answers.length} answer activities extracted`;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -52,6 +39,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onAddFiles,
   onResetAll,
 }) => {
+  const exportController = useRef<AbortController>();
+  useEffect(() => () => exportController.current?.abort(), [packages]);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<string>('');
   const [showReviewer, setShowReviewer] = useState(false);
@@ -63,13 +52,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // Single module export
   const handleDownloadSinglePdf = async () => {
     try {
+      exportController.current = new AbortController();
       setIsExporting(true);
       setExportProgress('Preparing slides...');
       await exportSlidesToPdf(currentPkg, (curr, total) => {
         setExportProgress(`Compiling ${curr}/${total}`);
-      });
+      }, exportController.current.signal);
     } catch (err: any) {
-      console.error(err);
+      if (exportController.current?.signal.aborted) return;
       alert('Failed to generate PDF: ' + (err?.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
@@ -80,13 +70,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // Batch merge all modules export
   const handleDownloadBatchPdf = async () => {
     try {
+      exportController.current = new AbortController();
       setIsExporting(true);
       setExportProgress('Merging all modules...');
       await exportBatchToPdf(packages, (curr, total, modName) => {
-        setExportProgress(`Slide ${curr}/${total} (${modName.slice(0, 15)}...)`);
-      });
+        setExportProgress(`Item ${curr}/${total} (${modName.slice(0, 15)}...)`);
+      }, exportController.current.signal);
     } catch (err: any) {
-      console.error(err);
+      if (exportController.current?.signal.aborted) return;
       alert('Failed to batch merge PDF: ' + (err?.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
@@ -117,7 +108,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           u = `${proto}${u}`;
         }
         u = u.replace(/&amp;/g, '&');
-        if (u) canvaUrl = u;
+        if (u) canvaUrl = externalUrl(u) || null;
       }
     });
   });
@@ -130,6 +121,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <div className="no-print bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20 transition-colors">
+      {isExporting && <button className="text-sm underline p-2" onClick={() => exportController.current?.abort()}>Cancel export</button>}
       {/* Hidden file input for adding more modules */}
       <input
         ref={addFileInputRef}
@@ -239,15 +231,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-          {/* Exam Reviewer & Answer Key Button */}
+          {/* Answers Button */}
           <button
             type="button"
             onClick={() => setShowReviewer(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-xs font-semibold shadow-2xs transition-colors"
-            title="Open Exam Reviewer & Answer Key"
+            title="Open Answers"
           >
             <BookOpen className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-            <span>Exam Reviewer</span>
+            <span>Answers</span>
           </button>
 
           {/* Prominent Canva Link if detected */}
@@ -342,6 +334,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </div>
 
       <ReviewerModal
+        packages={packages}
         pkg={currentPkg}
         isOpen={showReviewer}
         onClose={() => setShowReviewer(false)}

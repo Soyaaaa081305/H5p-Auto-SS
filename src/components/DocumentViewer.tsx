@@ -1,53 +1,41 @@
-import React from 'react';
-import { H5PPackage } from '../types/h5p';
-import { CoursePresentationRenderer } from './renderers/CoursePresentationRenderer';
-import { InteractiveBookRenderer } from './renderers/InteractiveBookRenderer';
-import { ColumnRenderer } from './renderers/ColumnRenderer';
-import { InteractiveVideoRenderer } from './renderers/InteractiveVideoRenderer';
-import { QuestionSetRenderer } from './renderers/QuestionSetRenderer';
-import { FallbackRenderer } from './renderers/FallbackRenderer';
-
-interface DocumentViewerProps {
-  pkg: H5PPackage;
-}
-
-export const DocumentViewer: React.FC<DocumentViewerProps> = ({ pkg }) => {
-  const { mainLibrary, content, assetMap } = pkg;
-
+import type { H5PPackage } from "../types/h5p";
+import { ElementDispatcher } from "./renderers/ElementDispatcher";
+export function DocumentViewer({ pkg }: { pkg: H5PPackage }) {
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:p-0 print:max-w-none print:m-0">
-      {mainLibrary.startsWith('H5P.CoursePresentation') ? (
-        <CoursePresentationRenderer
-          content={content as any}
-          assetMap={assetMap}
-        />
-      ) : mainLibrary.startsWith('H5P.InteractiveBook') ? (
-        <InteractiveBookRenderer
-          content={content as any}
-          assetMap={assetMap}
-        />
-      ) : mainLibrary.startsWith('H5P.InteractiveVideo') ? (
-        <InteractiveVideoRenderer
-          content={content}
-          assetMap={assetMap}
-        />
-      ) : mainLibrary.startsWith('H5P.QuestionSet') ? (
-        <QuestionSetRenderer
-          content={content}
-          assetMap={assetMap}
-        />
-      ) : mainLibrary.startsWith('H5P.Column') ? (
-        <ColumnRenderer
-          content={content}
-          assetMap={assetMap}
-        />
-      ) : (
-        <FallbackRenderer
-          content={content}
-          mainLibrary={mainLibrary}
-          assetMap={assetMap}
-        />
-      )}
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:p-0">
+      <ElementDispatcher
+        action={{
+          library:
+            pkg.mainLibrary +
+            (pkg.report.nodes[0]?.version
+              ? " " + pkg.report.nodes[0].version
+              : ""),
+          params: pkg.content,
+        }}
+        assetMap={pkg.assetMap}
+      />
+      {![
+        "H5P.InteractiveBook",
+        "H5P.Column",
+        "H5P.CoursePresentation",
+        "H5P.QuestionSet",
+        "H5P.InteractiveVideo",
+      ].includes(pkg.mainLibrary) &&
+        pkg.report.nodes
+          .slice(1)
+          .filter((n) => !["H5P.Column", "H5P.QuestionSet"].includes(n.library))
+          .map((n) => (
+            <section key={n.path} className="my-4">
+              <p className="text-xs text-zinc-500">{n.location}</p>
+              <ElementDispatcher
+                action={{
+                  library: n.library + (n.version ? " " + n.version : ""),
+                  params: n.params,
+                }}
+                assetMap={pkg.assetMap}
+              />
+            </section>
+          ))}
     </div>
   );
-};
+}

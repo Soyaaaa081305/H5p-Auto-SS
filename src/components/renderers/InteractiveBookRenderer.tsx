@@ -1,3 +1,4 @@
+import { safeHtml } from '../../lib/security';
 import React from 'react';
 import { InteractiveBookContent } from '../../types/h5p';
 import { resolveAsset } from '../../lib/h5pParser';
@@ -13,7 +14,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
   content,
   assetMap,
 }) => {
-  const chapters = content.chapters || [];
+  const chapters = Array.isArray(content.chapters) ? content.chapters : [];
   const coverImage = content.bookCover?.coverMedium?.params?.file?.path;
   const coverUrl = resolveAsset(coverImage, assetMap);
 
@@ -32,7 +33,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
           {content.bookCover?.coverDescription && (
             <div
               className="text-zinc-700 text-base max-w-2xl mx-auto"
-              dangerouslySetInnerHTML={{ __html: content.bookCover.coverDescription }}
+              dangerouslySetInnerHTML={{ __html: safeHtml(content.bookCover.coverDescription) }}
             />
           )}
         </div>
@@ -40,7 +41,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
 
       {/* Chapters */}
       {chapters.map((chapter, cIdx) => {
-        const sections = chapter.params?.content || [];
+        const sections = Array.isArray(chapter.params?.content) ? chapter.params.content : [];
 
         return (
           <section
@@ -52,7 +53,7 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
                 <BookOpen className="w-5 h-5" />
               </div>
               <h2 className="text-xl font-bold text-zinc-900 font-sans">
-                Chapter {cIdx + 1}: {chapter.title || 'Untitled Chapter'}
+                Chapter {cIdx + 1}: {chapter.title || (chapter as any).metadata?.title || 'Untitled Chapter'}
               </h2>
             </div>
 

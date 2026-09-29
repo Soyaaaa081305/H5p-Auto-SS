@@ -1,82 +1,57 @@
-// Offline Service Worker for H5P to PDF Viewer & Study Tool
-const CACHE_NAME = 'h5p-pdf-v1';
-const PRECACHE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icon.svg',
-];
-
-self.addEventListener('install', (event) => {
+const CACHE_NAME = "h5p-pdf-shell-v2";
+const root = new URL("./", self.location.href);
+const shell = ["index.html", "manifest.webmanifest", "icon.svg"].map(
+  (p) => new URL(p, root).href,
+);
+self.addEventListener("install", (event) =>
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', (event) => {
+    caches
+      .open(CACHE_NAME)
+      .then((c) => c.addAll(shell))
+      .then(() => self.skipWaiting()),
+  ),
+);
+self.addEventListener("activate", (event) =>
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-
-  // Only cache GET requests and http/https schemes
-  if (request.method !== 'GET' || !request.url.startsWith('http')) {
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith("h5p-pdf-") && k !== CACHE_NAME)
+            .map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  ),
+);
+self.addEventListener("fetch", (event) => {
+  const request = event.request,
+    url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== root.origin || url.search)
     return;
-  }
-
-  // Network-first for HTML navigation, Cache-first for scripts/styles/assets
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request).then((res) => res || caches.match('./index.html')))
-    );
-    return;
-  }
-
+  const relative = url.pathname.slice(root.pathname.length);
+  const isShell = shell.includes(url.href) || url.href === root.href;
+  const isBuildAsset =
+    url.pathname.startsWith(root.pathname) &&
+    /^assets\/[\w.-]+\.(js|css|woff2?|png|svg)$/.test(relative);
+  if (!isShell && !isBuildAsset) return;
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to update cache for next time (stale-while-revalidate)
-        fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-            }
-          })
-          .catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+    fetch(request)
+      .then((response) => {
+        if (response.ok && response.type === "basic") {
+          const copy = response.clone();
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((c) => c.put(request, copy)),
+          );
         }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache);
-        });
         return response;
-      });
-    })
+      })
+      .catch(
+        async () =>
+          (await caches.match(request)) ||
+          (isShell ? await caches.match(shell[0]) : undefined) ||
+          Response.error(),
+      ),
   );
 });

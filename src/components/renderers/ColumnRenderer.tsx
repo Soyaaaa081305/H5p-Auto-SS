@@ -11,7 +11,7 @@ export const ColumnRenderer: React.FC<ColumnRendererProps> = ({
   assetMap,
 }) => {
   const contentItems: Array<{ content?: any; library?: string; params?: any }> =
-    content.content || [];
+    Array.isArray(content.content) ? content.content : [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

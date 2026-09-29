@@ -1,1006 +1,380 @@
-import { jsPDF } from 'jspdf';
-import { H5PPackage } from '../types/h5p';
-import { resolveAsset } from './h5pParser';
-
-function loadImage(src: string): Promise<HTMLImageElement> {
+import { jsPDF } from "jspdf";
+import type { AnswerItem, H5PPackage } from "../types/h5p";
+import { resolveAsset } from "./h5pParser";
+import { answerText, extractNode, plainText, statusLabel } from "./extraction";
+const W = 1920,
+  H = 1080;
+const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+function canvas() {
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  return c;
+}
+async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = (e) => reject(e);
+    const timer = setTimeout(() => {
+      img.src = "";
+      reject(new Error("Image load timed out."));
+    }, 10000);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Image unavailable."));
+    };
     img.src = src;
   });
 }
-
-function cleanHtml(html: string): string {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
-}
-
-function wrapText(
+function lines(
   ctx: CanvasRenderingContext2D,
   text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number
-) {
-  const words = text.split(' ');
-  let line = '';
-  let curY = y;
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && n > 0) {
-      ctx.fillText(line, x, curY);
-      line = words[n] + ' ';
-      curY += lineHeight;
-    } else {
-      line = testLine;
-    }
-  }
-  ctx.fillText(line, x, curY);
-}
-
-// Render clean, high-resolution text and cards for Fill in the Blanks quiz slide
-function renderBlanksOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const prompt = cleanHtml(params.text || 'Fill in the missing words:');
-  const rawQuestions: string[] = params.questions || [];
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(60, 50, 1800, 980);
-  ctx.strokeRect(60, 50, 1800, 980);
-
-  // Header Title
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Review & Practice: Fill in the Blanks', 100, 120);
-
-  // Subtitle / Prompt
-  ctx.fillStyle = '#64748b';
-  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(prompt, 100, 160);
-
-  // Divider line
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(100, 185);
-  ctx.lineTo(1820, 185);
-  ctx.stroke();
-
-  // Extract individual question strings using regex
-  const items: string[] = [];
-  rawQuestions.forEach((qStr: string) => {
-    const pRegex = /<p>(.*?)<\/p>/gi;
-    let match;
-    let found = false;
-    while ((match = pRegex.exec(qStr)) !== null) {
-      found = true;
-      if (match[1].trim()) items.push(match[1].trim());
-    }
-    if (!found && qStr.trim()) items.push(qStr.trim());
-  });
-
-  // Render 2 columns of 5 questions each
-  const leftX = 100;
-  const rightX = 970;
-  const colWidth = 850;
-  const cardHeight = 138;
-
-  items.forEach((item, idx) => {
-    const isRight = idx >= 5;
-    const colX = isRight ? rightX : leftX;
-    const rowIdx = isRight ? idx - 5 : idx;
-    const cardY = 210 + rowIdx * (cardHeight + 16);
-
-    // Question box
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(colX, cardY, colWidth, cardHeight);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
-
-    // Number tag
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Question ${idx + 1}`, colX + 20, cardY + 28);
-
-    // Parse text and solution
-    const parts = item.split(/(\*[^*]+\*)/g);
-    let fullText = '';
-    let solution = '';
-
-    parts.forEach((p) => {
-      if (p.startsWith('*') && p.endsWith('*')) {
-        const raw = p.slice(1, -1);
-        const [sol] = raw.split(':');
-        solution = sol.split('/')[0].trim();
-        fullText += ` [ ${solution} ] `;
-      } else {
-        fullText += p.replace(/<[^>]+>/g, '');
+  width: number,
+): string[] {
+  const result: string[] = [];
+  for (const paragraph of text.split("\n")) {
+    let line = "";
+    for (const token of paragraph.split(/(\s+)/)) {
+      if (line && ctx.measureText(line + token).width > width) {
+        result.push(line.trimEnd());
+        line = "";
       }
-    });
-
-    fullText = fullText.replace(/^\s*\(\d+\)\s*/, '');
-
-    // Draw question text wrapped
-    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#334155';
-    wrapText(ctx, fullText, colX + 20, cardY + 56, colWidth - 40, 22);
-
-    // Draw green answer pill at bottom of card
-    if (solution) {
-      ctx.fillStyle = '#ecfdf5';
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 1;
-      const ansWidth = ctx.measureText(`✓ Answer: ${solution}`).width + 24;
-      ctx.fillRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
-      ctx.strokeRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
-
-      ctx.fillStyle = '#065f46';
-      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`✓ Answer: ${solution}`, colX + 28, cardY + cardHeight - 18);
-    }
-  });
-}
-
-function renderDragTextOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const taskDescription = cleanHtml(params.taskDescription || 'Drag the words into the correct boxes');
-  const textField = params.textField || '';
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(60, 50, 1800, 980);
-  ctx.strokeRect(60, 50, 1800, 980);
-
-  // Header Title
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(taskDescription, 100, 120);
-
-  // Subtitle / Prompt
-  ctx.fillStyle = '#64748b';
-  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Auto-Solved Study Mode • All answers verified and placed in-line', 100, 160);
-
-  // Divider line
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(100, 185);
-  ctx.lineTo(1820, 185);
-  ctx.stroke();
-
-  // Parse lines
-  const rawLines = textField.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
-
-  // Render 2 columns
-  const leftX = 100;
-  const rightX = 970;
-  const colWidth = 850;
-  const cardHeight = rawLines.length > 6 ? 138 : 160;
-
-  rawLines.forEach((line: string, idx: number) => {
-    if (idx >= 10) return; // Fits up to 10 questions cleanly
-    const isRight = idx >= 5;
-    const colX = isRight ? rightX : leftX;
-    const rowIdx = isRight ? idx - 5 : idx;
-    const cardY = 210 + rowIdx * (cardHeight + 16);
-
-    // Card box
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(colX, cardY, colWidth, cardHeight);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
-
-    // Question number tag
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Item [${idx + 1}]`, colX + 20, cardY + 28);
-
-    // Parse solution and text
-    const parts = line.split(/(\*[^*]+\*)/g);
-    let fullText = '';
-    let solution = '';
-
-    parts.forEach((p) => {
-      if (p.startsWith('*') && p.endsWith('*')) {
-        const raw = p.slice(1, -1);
-        const [sol] = raw.split(':');
-        solution = sol.trim();
-        fullText += ` [ ✓ ${solution} ] `;
-      } else {
-        fullText += p.replace(/<[^>]+>/g, '').replace(/^\s*\[\d+\]\s*/, '').replace(/^\s*\(\d+\)\s*/, '');
+      if (!line && /^\s+$/.test(token)) continue;
+      for (const char of Array.from(token)) {
+        if (line && ctx.measureText(line + char).width > width) {
+          result.push(line);
+          line = "";
+        }
+        line += char;
       }
-    });
-
-    // Draw question text wrapped
-    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#334155';
-    wrapText(ctx, fullText, colX + 20, cardY + 56, colWidth - 40, 22);
-
-    // Draw green answer pill at bottom of card
-    if (solution) {
-      ctx.fillStyle = '#ecfdf5';
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 1;
-      const ansWidth = ctx.measureText(`✓ Match: ${solution}`).width + 24;
-      ctx.fillRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
-      ctx.strokeRect(colX + 20, cardY + cardHeight - 34, ansWidth, 24);
-
-      ctx.fillStyle = '#065f46';
-      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`✓ Match: ${solution}`, colX + 28, cardY + cardHeight - 18);
     }
-  });
-}
-
-function renderSummaryOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const intro = cleanHtml(params.intro || 'Choose the correct statement:');
-  const summaries: Array<{ summary: string[] }> = params.summaries || [];
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(60, 50, 1800, 980);
-  ctx.strokeRect(60, 50, 1800, 980);
-
-  // Header Title
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Review & Practice: Choose the Correct Statement', 100, 120);
-
-  // Subtitle / Prompt
-  ctx.fillStyle = '#64748b';
-  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(`${intro} (Right answers are marked with ✓)`, 100, 160);
-
-  // Divider line
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(100, 185);
-  ctx.lineTo(1820, 185);
-  ctx.stroke();
-
-  // Render 2 columns of 5 questions each
-  const leftX = 100;
-  const rightX = 970;
-  const colWidth = 850;
-  const cardHeight = 138;
-
-  summaries.forEach((item, idx) => {
-    const isRight = idx >= 5;
-    const colX = isRight ? rightX : leftX;
-    const rowIdx = isRight ? idx - 5 : idx;
-    const cardY = 210 + rowIdx * (cardHeight + 16);
-
-    const statements = item.summary || [];
-    const correctStatement = cleanHtml(statements[0] || '');
-    const wrongStatement = cleanHtml(statements[1] || '');
-
-    // Card background
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(colX, cardY, colWidth, cardHeight);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
-
-    // Number tag
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Question ${idx + 1}`, colX + 20, cardY + 28);
-
-    // Correct statement box (green)
-    ctx.fillStyle = '#ecfdf5';
-    ctx.fillRect(colX + 20, cardY + 38, colWidth - 40, 48);
-    ctx.strokeStyle = '#34d399';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(colX + 20, cardY + 38, colWidth - 40, 48);
-
-    ctx.fillStyle = '#065f46';
-    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    wrapText(ctx, `✓ ${correctStatement}`, colX + 30, cardY + 62, colWidth - 60, 18);
-
-    // Distractor box (muted/gray)
-    if (wrongStatement) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(colX + 20, cardY + 92, colWidth - 40, 36);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(colX + 20, cardY + 92, colWidth - 40, 36);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, `✗ ${wrongStatement}`, colX + 30, cardY + 114, colWidth - 60, 16);
-    }
-  });
-}
-
-function renderSingleChoiceSetOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const choices: Array<{ question: string; answers: string[] }> = params.choices || [];
-  if (choices.length === 0) {
-    return renderMultiChoiceOnCanvas(ctx, params);
+    result.push(line.trimEnd());
   }
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(60, 50, 1800, 980);
-  ctx.strokeRect(60, 50, 1800, 980);
-
-  // Header Title
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Quiz: Single Choice Set', 100, 120);
-
-  // Subtitle / Prompt
-  ctx.fillStyle = '#64748b';
-  ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(`All questions and verified answers (${choices.length} items • Verified answers marked with ✓)`, 100, 160);
-
-  // Divider line
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(100, 185);
-  ctx.lineTo(1820, 185);
-  ctx.stroke();
-
-  // If 1-4 questions, 1 column layout
-  if (choices.length <= 4) {
-    const cardHeight = Math.min(180, Math.floor(780 / choices.length) - 20);
-    choices.forEach((c, idx) => {
-      const cardY = 210 + idx * (cardHeight + 20);
-      const qText = cleanHtml(c.question || `Question ${idx + 1}`);
-      const correctAns = cleanHtml(c.answers?.[0] || '');
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(100, cardY, 1720, cardHeight);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(100, cardY, 1720, cardHeight);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`Question ${idx + 1}`, 130, cardY + 36);
-
-      ctx.fillStyle = '#334155';
-      ctx.font = '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, qText, 280, cardY + 36, 1500, 24);
-
-      ctx.fillStyle = '#ecfdf5';
-      ctx.fillRect(130, cardY + 70, 1660, 48);
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(130, cardY + 70, 1660, 48);
-
-      ctx.fillStyle = '#059669';
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('✓ CORRECT ANSWER:', 155, cardY + 100);
-
-      ctx.fillStyle = '#065f46';
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, correctAns, 380, cardY + 100, 1380, 22);
-    });
-    return;
-  }
-
-  // 5 to 10 questions: 2 columns of up to 5 questions each
-  const leftX = 100;
-  const rightX = 970;
-  const colWidth = 850;
-  const cardHeight = 142;
-
-  choices.slice(0, 10).forEach((c, idx) => {
-    const isRight = idx >= 5;
-    const colX = isRight ? rightX : leftX;
-    const rowIdx = isRight ? idx - 5 : idx;
-    const cardY = 210 + rowIdx * (cardHeight + 14);
-
-    const qText = cleanHtml(c.question || `Question ${idx + 1}`);
-    const correctAns = cleanHtml(c.answers?.[0] || '');
-    const wrongAns = cleanHtml(c.answers?.[1] || '');
-
-    // Card background
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(colX, cardY, colWidth, cardHeight);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(colX, cardY, colWidth, cardHeight);
-
-    // Question number & title
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Q${idx + 1}:`, colX + 16, cardY + 26);
-
-    ctx.fillStyle = '#1e293b';
-    ctx.font = '600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    wrapText(ctx, qText, colX + 50, cardY + 26, colWidth - 70, 18);
-
-    // Correct statement box (green)
-    ctx.fillStyle = '#ecfdf5';
-    ctx.fillRect(colX + 16, cardY + 48, colWidth - 32, 46);
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(colX + 16, cardY + 48, colWidth - 32, 46);
-
-    ctx.fillStyle = '#059669';
-    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    wrapText(ctx, `✓ ${correctAns}`, colX + 26, cardY + 74, colWidth - 52, 17);
-
-    // Distractor box (muted/gray)
-    if (wrongAns) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(colX + 16, cardY + 100, colWidth - 32, 34);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(colX + 16, cardY + 100, colWidth - 32, 34);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, `✗ Other: ${wrongAns}`, colX + 26, cardY + 122, colWidth - 52, 16);
-    }
-  });
+  return result;
 }
-
-function renderMultiChoiceOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const question = cleanHtml(params.question || params.text || 'Multiple Choice Question');
-  const answers: Array<{ text: string; correct?: boolean }> = params.answers || [];
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(80, 60, 1760, 960);
-  ctx.strokeRect(80, 60, 1760, 960);
-
-  // Header
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Quiz: Multiple Choice', 130, 130);
-
-  // Divider
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(130, 155);
-  ctx.lineTo(1790, 155);
-  ctx.stroke();
-
-  // Question Prompt
-  ctx.fillStyle = '#1e293b';
-  ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  wrapText(ctx, question, 130, 205, 1660, 32);
-
-  // Answers list
-  let curY = 320;
-  const optHeight = 75;
-  const optWidth = 1660;
-
-  answers.forEach((ans) => {
-    const isCorrect = Boolean(ans.correct);
-    const ansText = cleanHtml(ans.text || '');
-
-    ctx.fillStyle = isCorrect ? '#ecfdf5' : '#f8fafc';
-    ctx.fillRect(130, curY, optWidth, optHeight);
-    ctx.strokeStyle = isCorrect ? '#10b981' : '#e2e8f0';
-    ctx.lineWidth = isCorrect ? 2 : 1.5;
-    ctx.strokeRect(130, curY, optWidth, optHeight);
-
-    if (isCorrect) {
-      ctx.fillStyle = '#059669';
-      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('✓ [CORRECT ANSWER]', 155, curY + 45);
-    } else {
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('○', 155, curY + 45);
-    }
-
-    ctx.fillStyle = isCorrect ? '#065f46' : '#334155';
-    ctx.font = isCorrect
-      ? 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      : '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    wrapText(ctx, ansText, 440, curY + 45, optWidth - 470, 24);
-
-    curY += optHeight + 20;
-  });
-}
-
-function renderTrueFalseOnCanvas(ctx: CanvasRenderingContext2D, params: any) {
-  const question = cleanHtml(params.question || '');
-  const isTrueCorrect = String(params.correct).toLowerCase() === 'true';
-
-  // Slide Background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Inner Container
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2;
-  ctx.fillRect(80, 60, 1760, 960);
-  ctx.strokeRect(80, 60, 1760, 960);
-
-  // Header
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('Quiz: True or False', 130, 130);
-
-  // Divider
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.beginPath();
-  ctx.moveTo(130, 155);
-  ctx.lineTo(1790, 155);
-  ctx.stroke();
-
-  // Question Prompt
-  ctx.fillStyle = '#1e293b';
-  ctx.font = '600 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  wrapText(ctx, question, 130, 230, 1660, 36);
-
-  // True & False options
-  const options = [
-    { label: 'True', isCorrect: isTrueCorrect },
-    { label: 'False', isCorrect: !isTrueCorrect },
-  ];
-
-  options.forEach((opt, idx) => {
-    const cardY = 380 + idx * 110;
-    const isCor = opt.isCorrect;
-
-    ctx.fillStyle = isCor ? '#ecfdf5' : '#f8fafc';
-    ctx.fillRect(130, cardY, 800, 85);
-    ctx.strokeStyle = isCor ? '#10b981' : '#e2e8f0';
-    ctx.lineWidth = isCor ? 2 : 1.5;
-    ctx.strokeRect(130, cardY, 800, 85);
-
-    ctx.fillStyle = isCor ? '#059669' : '#94a3b8';
-    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(isCor ? `✓ ${opt.label} [Correct Answer]` : `○ ${opt.label}`, 160, cardY + 50);
-  });
-}
-
-async function renderSlideToCanvas(
+const filename = (s: string) =>
+  s
+    .replace(/[^a-zA-Z0-9_\- ]/g, "")
+    .trim()
+    .slice(0, 100) || "H5P";
+export async function renderSlideToCanvas(
   slide: any,
   slideIndex: number,
-  assetMap: Map<string, string>
+  assets: Map<string, string>,
+  globalBackground?: any,
 ): Promise<HTMLCanvasElement> {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1920;
-  canvas.height = 1080;
-  const ctx = canvas.getContext('2d')!;
-
-  const bgColor =
-    slide.slideBackgroundSelector?.fillSlideBackground ||
-    slide.slideBackgroundSelector?.fillColorSelector ||
-    '#ffffff';
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // Background Image
-  const bgImgPath = slide.slideBackgroundSelector?.imageSlideBackground?.path;
-  const bgUrl = resolveAsset(bgImgPath, assetMap);
-
-  if (bgUrl) {
+  const c = canvas(),
+    ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  const bg = slide.slideBackgroundSelector || globalBackground;
+  if (/^#[0-9a-f]{3,8}$/i.test(bg?.fillSlideBackground || "")) {
+    ctx.fillStyle = bg.fillSlideBackground;
+    ctx.fillRect(0, 0, W, H);
+  }
+  const background = resolveAsset(bg?.imageSlideBackground?.path, assets);
+  if (background) {
     try {
-      const img = await loadImage(bgUrl);
-      ctx.drawImage(img, 0, 0, 1920, 1080);
-    } catch (e) {
-      console.warn(`Failed to render slide image for slide ${slideIndex + 1}`, e);
+      ctx.drawImage(await loadImage(background), 0, 0, W, H);
+    } catch {
+      /* Preserve other slide elements. */
     }
   }
-
-  // Check for Quiz elements (e.g. Slide 15)
-  const elements: any[] = slide.elements || [];
-  for (const el of elements) {
+  for (const el of Array.isArray(slide.elements) ? slide.elements : []) {
     const action = el.action;
-    if (!action) continue;
-    const library: string = action.library || '';
-    const params = action.params || {};
-
-    if (library.startsWith('H5P.Blanks')) {
-      renderBlanksOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.DragText') || library.startsWith('H5P.DragQuestion')) {
-      renderDragTextOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.Summary')) {
-      renderSummaryOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.SingleChoiceSet')) {
-      renderSingleChoiceSetOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.MultiChoice')) {
-      renderMultiChoiceOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.TrueFalse')) {
-      renderTrueFalseOnCanvas(ctx, params);
-    } else if (library.startsWith('H5P.Image')) {
-      const imgPath = params.file?.path;
-      const imgUrl = resolveAsset(imgPath, assetMap);
-      if (imgUrl) {
-        try {
-          const img = await loadImage(imgUrl);
-          const elX = ((el.x ?? 0) / 100) * 1920;
-          const elY = ((el.y ?? 0) / 100) * 1080;
-          const elW = ((el.width ?? 100) / 100) * 1920;
-          const elH = ((el.height ?? 100) / 100) * 1080;
-          ctx.drawImage(img, elX, elY, elW, elH);
-        } catch (e) {
-          console.warn('Could not draw element image', e);
-        }
-      }
-    } else if (library.startsWith('H5P.Text') || library.startsWith('H5P.AdvancedText')) {
-      const txt = cleanHtml(params.text || '');
-      if (txt) {
-        const elX = ((el.x ?? 5) / 100) * 1920;
-        const elY = ((el.y ?? 5) / 100) * 1080;
-        const elW = ((el.width ?? 90) / 100) * 1920;
-        ctx.fillStyle = '#18181b';
-        ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        wrapText(ctx, txt, elX, elY + 24, elW, 30);
-      }
-    }
-  }
-
-  return canvas;
-}
-
-// Universal Question & Study Guide PDF generator for non-slide modules (Interactive Video, Question Sets, etc.)
-export async function exportQuestionsToPdf(
-  pkg: H5PPackage,
-  onProgress?: (current: number, total: number) => void
-): Promise<void> {
-  const questions: Array<{ title: string; question: string; answer: string; distractors?: string[] }> = [];
-
-  const collect = (action: any) => {
-    if (!action) return;
-    const lib = action.library || '';
-    const params = action.params || {};
-
-    if (lib.startsWith('H5P.Blanks')) {
-      (params.questions || []).forEach((qStr: string) => {
-        const parts = qStr.split(/(\*[^*]+\*)/g);
-        let q = '', a = '';
-        parts.forEach((p: string) => {
-          if (p.startsWith('*') && p.endsWith('*')) {
-            a = p.slice(1, -1).split(':')[0].trim();
-            q += ' [ ' + a + ' ] ';
-          } else {
-            q += cleanHtml(p);
-          }
-        });
-        if (a) questions.push({ title: 'Fill in the Blank', question: q.trim(), answer: a });
-      });
-    } else if (lib.startsWith('H5P.DragText') || lib.startsWith('H5P.DragQuestion')) {
-      (params.textField || '').split(/\n+/).forEach((line: string) => {
-        const parts = line.split(/(\*[^*]+\*)/g);
-        let q = '', a = '';
-        parts.forEach((p: string) => {
-          if (p.startsWith('*') && p.endsWith('*')) {
-            a = p.slice(1, -1).split(':')[0].trim();
-            q += ' [ ' + a + ' ] ';
-          } else {
-            q += cleanHtml(p);
-          }
-        });
-        if (a) questions.push({ title: 'Drag the Words Match', question: q.trim(), answer: a });
-      });
-    } else if (lib.startsWith('H5P.Summary')) {
-      (params.summaries || []).forEach((s: any, idx: number) => {
-        const stmts = s.summary || [];
-        if (stmts.length > 0) {
-          questions.push({
-            title: `Summary #${idx + 1}`,
-            question: 'Which statement accurately describes the course concept?',
-            answer: cleanHtml(stmts[0]),
-            distractors: stmts.slice(1).map(cleanHtml)
-          });
-        }
-      });
-    } else if (lib.startsWith('H5P.SingleChoiceSet')) {
-      const choices: Array<{ question: string; answers: string[] }> = params.choices || [];
-      choices.forEach((c, idx) => {
-        questions.push({
-          title: `Single Choice #${idx + 1}`,
-          question: cleanHtml(c.question || `Question #${idx + 1}`),
-          answer: cleanHtml(c.answers?.[0] || ''),
-          distractors: (c.answers?.slice(1) || []).map(cleanHtml)
-        });
-      });
-    } else if (lib.startsWith('H5P.MultiChoice')) {
-      const qText = cleanHtml(params.question || params.text || 'Multiple Choice Question');
-      const answers: any[] = params.answers || [];
-      const correct = answers.find(a => a.correct);
-      const distractors = answers.filter(a => !a.correct).map(a => cleanHtml(a.text));
-      questions.push({
-        title: 'Multiple Choice',
-        question: qText,
-        answer: correct ? cleanHtml(correct.text) : 'None marked',
-        distractors
-      });
-    } else if (lib.startsWith('H5P.TrueFalse')) {
-      const isTrue = String(params.correct).toLowerCase() === 'true';
-      questions.push({
-        title: 'True or False',
-        question: cleanHtml(params.question || 'True or False Question'),
-        answer: isTrue ? 'True' : 'False',
-        distractors: [isTrue ? 'False' : 'True']
-      });
-    }
-  };
-
-  (pkg.content?.interactiveVideo?.interactions || pkg.content?.interactions || []).forEach((i: any) => collect(i.action));
-  (pkg.content?.questions || []).forEach((q: any) => collect(q.action || q));
-  collect({ library: pkg.mainLibrary, params: pkg.content });
-
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'px',
-    format: [1920, 1080],
-    hotfixes: ['px_scaling'],
-  });
-
-  const title = pkg.metadata.title || pkg.fileName.replace(/\.h5p$/i, '');
-
-  if (questions.length === 0) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, 1920, 1080);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(title, 100, 120);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Module Type: ${pkg.mainLibrary}`, 100, 170);
-    ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Interactive video or media module. All parameters are viewable in the interactive web player.', 100, 240);
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
-    doc.save(`${title.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()}_Study_Guide.pdf`);
-    return;
-  }
-
-  const pageSize = 2;
-  const totalPages = Math.ceil(questions.length / pageSize);
-
-  for (let pIdx = 0; pIdx < totalPages; pIdx++) {
-    if (onProgress) onProgress(pIdx + 1, totalPages);
-    if (pIdx > 0) doc.addPage([1920, 1080], 'landscape');
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d')!;
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, 1920, 1080);
-
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(title, 100, 110);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Study Guide & Verified Answer Key • Page ${pIdx + 1} of ${totalPages}`, 100, 150);
-
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 2;
+    if (!action || typeof action.library !== "string") continue;
+    const [library, version] = action.library.split(" "),
+      p = action.params || {};
+    const x = (Math.max(0, Number(el.x) || 0) * W) / 100,
+      y = (Math.max(0, Number(el.y) || 0) * H) / 100;
+    const width = (Math.max(1, Number(el.width) || 100) * W) / 100,
+      height = (Math.max(1, Number(el.height) || 100) * H) / 100;
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(100, 175);
-    ctx.lineTo(1820, 175);
-    ctx.stroke();
-
-    const pageQuestions = questions.slice(pIdx * pageSize, (pIdx + 1) * pageSize);
-
-    pageQuestions.forEach((q, qIdx) => {
-      const cardY = 210 + qIdx * 400;
-      const cardW = 1720;
-      const cardH = 370;
-
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1.5;
-      ctx.fillRect(100, cardY, cardW, cardH);
-      ctx.strokeRect(100, cardY, cardW, cardH);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`Question ${pIdx * pageSize + qIdx + 1} (${q.title})`, 130, cardY + 45);
-
-      ctx.fillStyle = '#1e293b';
-      ctx.font = '500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, q.question, 130, cardY + 90, cardW - 60, 28);
-
-      ctx.fillStyle = '#ecfdf5';
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 2;
-      ctx.fillRect(130, cardY + 180, cardW - 60, 75);
-      ctx.strokeRect(130, cardY + 180, cardW - 60, 75);
-
-      ctx.fillStyle = '#059669';
-      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('✓ CORRECT ANSWER:', 155, cardY + 225);
-
-      ctx.fillStyle = '#065f46';
-      ctx.font = 'bold 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      wrapText(ctx, q.answer, 400, cardY + 225, cardW - 440, 24);
-
-      if (q.distractors && q.distractors.length > 0) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        wrapText(ctx, `Incorrect options: ${q.distractors.join(' | ')}`, 130, cardY + 290, cardW - 60, 22);
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+    const src =
+      library === "H5P.Image" ? resolveAsset(p.file?.path, assets) : undefined;
+    if (src) {
+      try {
+        ctx.drawImage(await loadImage(src), x, y, width, height);
+      } catch {
+        /* No remote fallback. */
       }
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+    } else {
+      const answers = extractNode({
+        library,
+        version,
+        params: p,
+        path: "$",
+        location: `Slide ${slideIndex + 1}`,
+      });
+      const text = answers.length
+        ? answers.map((a) => `${a.prompt}\n${answerText(a)}`).join("\n")
+        : plainText(p.text || p.title);
+      ctx.fillStyle = "#18181b";
+      ctx.font = "24px sans-serif";
+      lines(ctx, text, Math.max(1, width - 16)).forEach((line, i) =>
+        ctx.fillText(line, x + 8, y + 28 + i * 31),
+      );
+    }
+    ctx.restore();
   }
-
-  doc.save(`${title.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()}_Study_Guide.pdf`);
+  return c;
 }
-
-export async function exportSlidesToPdf(
-  pkg: H5PPackage,
-  onProgress?: (current: number, total: number) => void
-): Promise<void> {
-  const slides: any[] = pkg.content?.presentation?.slides || [];
-  if (slides.length === 0) {
-    // Gracefully export questions & study notes for non-presentation modules
-    return exportQuestionsToPdf(pkg, onProgress);
-  }
-
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'px',
-    format: [1920, 1080],
-    hotfixes: ['px_scaling'],
+class Pages {
+  doc = new jsPDF({
+    orientation: "landscape",
+    unit: "px",
+    format: [W, H],
+    hotfixes: ["px_scaling"],
   });
-
-  const total = slides.length;
-
-  for (let i = 0; i < total; i++) {
-    if (onProgress) {
-      onProgress(i + 1, total);
-    }
-
-    if (i > 0) {
-      doc.addPage([1920, 1080], 'landscape');
-    }
-
-    const canvas = await renderSlideToCanvas(slides[i], i, pkg.assetMap);
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-    doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
+  page = canvas();
+  ctx = this.page.getContext("2d")!;
+  y = 0;
+  count = 0;
+  dirty = false;
+  constructor() {
+    this.reset();
   }
-
-  const rawTitle = pkg.metadata.title || pkg.fileName.replace(/\.h5p$/i, '');
-  const cleanFilename = `${rawTitle.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()}.pdf`;
-
-  doc.save(cleanFilename);
+  reset() {
+    this.ctx.fillStyle = "#f8fafc";
+    this.ctx.fillRect(0, 0, W, H);
+    this.y = 90;
+    this.dirty = false;
+  }
+  imagePage(c: HTMLCanvasElement) {
+    if (this.count++) this.doc.addPage([W, H], "landscape");
+    this.doc.addImage(
+      c.toDataURL("image/jpeg", 0.92),
+      "JPEG",
+      0,
+      0,
+      W,
+      H,
+      undefined,
+      "FAST",
+    );
+  }
+  flush() {
+    if (this.dirty) {
+      this.imagePage(this.page);
+      this.reset();
+    }
+  }
+  text(value: string, heading = false, answer = false) {
+    this.ctx.font = `${heading ? "bold 30" : "24"}px sans-serif`;
+    const rows = lines(this.ctx, value, W - 180);
+    for (const line of rows) {
+      if (this.y > H - 90) {
+        this.flush();
+        this.ctx.font = `${heading ? "bold 30" : "24"}px sans-serif`;
+      }
+      if (answer) {
+        this.ctx.fillStyle = "#ecfdf5";
+        this.ctx.fillRect(80, this.y - 26, W - 160, 34);
+      }
+      this.ctx.fillStyle = answer ? "#065f46" : heading ? "#0f172a" : "#334155";
+      this.ctx.fillText(line, 90, this.y);
+      this.y += heading ? 42 : 34;
+      this.dirty = true;
+    }
+    this.y += 18;
+  }
+  async answer(a: AnswerItem, assets: Map<string, string>) {
+    if (this.y > H - 300) this.flush();
+    this.text(`${a.location} · ${statusLabel[a.status]}`, true);
+    this.text(a.prompt);
+    this.text(answerText(a), false, true);
+    for (const p of a.parts)
+      for (const path of p.images || []) {
+        const src = resolveAsset(path, assets);
+        if (!src) continue;
+        try {
+          const img = await loadImage(src);
+          const scale = Math.min(500 / img.width, 300 / img.height);
+          const w = img.width * scale,
+            h = img.height * scale;
+          if (this.y + h > H - 90) this.flush();
+          this.ctx.drawImage(img, 90, this.y, w, h);
+          this.y += h + 20;
+          this.dirty = true;
+        } catch {
+          this.text("Answer image unavailable.");
+        }
+      }
+  }
+  save(name: string) {
+    this.flush();
+    if (!this.count) {
+      this.text("No exportable package content.");
+      this.flush();
+    }
+    const blob = this.doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filename(name)}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.page.width = 0;
+    this.page.height = 0;
+  }
 }
-
+export async function exportAnswerKey(
+  packages: H5PPackage[],
+  selected?: AnswerItem[],
+  signal?: AbortSignal,
+) {
+  const pages = new Pages();
+  for (const p of packages) {
+    signal?.throwIfAborted();
+    pages.text(p.metadata.title || p.fileName, true);
+    const answers = selected
+      ? selected.filter((a) => p.report.answers.includes(a))
+      : p.report.answers;
+    if (!answers.length) pages.text("No matching stored answer key.");
+    for (const a of answers) {
+      signal?.throwIfAborted();
+      await pages.answer(a, p.assetMap);
+      await tick();
+    }
+  }
+  signal?.throwIfAborted();
+  pages.save("H5P Answer Key");
+}
+async function exportPackages(
+  packages: H5PPackage[],
+  onProgress?: (current: number, total: number, name: string) => void,
+  signal?: AbortSignal,
+) {
+  const pages = new Pages();
+  let current = 0;
+  const total = packages.reduce((n, p) => n + p.report.nodes.length, 0);
+  for (const pkg of packages) {
+    pages.text(pkg.metadata.title || pkg.fileName, true);
+    const presentations = pkg.report.nodes.filter(
+      (n) => n.library === "H5P.CoursePresentation",
+    );
+    for (const node of pkg.report.nodes) {
+      const inSlide = presentations.some((p) =>
+        node.path.startsWith(`${p.path}.params.presentation.slides`),
+      );
+      signal?.throwIfAborted();
+      onProgress?.(++current, total, pkg.metadata.title || pkg.fileName);
+      if (node.library === "H5P.CoursePresentation") {
+        const slides = node.params.presentation?.slides;
+        if (Array.isArray(slides))
+          for (let i = 0; i < slides.length; i++) {
+            signal?.throwIfAborted();
+            pages.flush();
+            const c = await renderSlideToCanvas(
+              slides[i],
+              i,
+              pkg.assetMap,
+              node.params.presentation?.globalBackgroundSelector,
+            );
+            pages.imagePage(c);
+            c.width = 0;
+            await tick();
+          }
+      }
+      if (
+        ["H5P.Text", "H5P.AdvancedText", "H5P.Table"].includes(node.library) &&
+        !node.path.includes(".task.elements") &&
+        !inSlide
+      ) {
+        const text = plainText(node.params.text || node.params.table);
+        if (text) {
+          pages.text(node.location, true);
+          pages.text(text);
+        }
+      }
+      if (
+        node.library === "H5P.Image" &&
+        !node.path.includes(".task.elements") &&
+        !inSlide
+      ) {
+        const src = resolveAsset(node.params.file?.path, pkg.assetMap);
+        if (src) {
+          try {
+            const img = await loadImage(src);
+            pages.flush();
+            const c = canvas(),
+              ctx = c.getContext("2d")!;
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, W, H);
+            const scale = Math.min(W / img.width, H / img.height);
+            ctx.drawImage(
+              img,
+              (W - img.width * scale) / 2,
+              (H - img.height * scale) / 2,
+              img.width * scale,
+              img.height * scale,
+            );
+            pages.imagePage(c);
+            c.width = 0;
+          } catch {
+            pages.text("Package image unavailable.");
+          }
+        }
+      }
+      for (const a of pkg.report.answers.filter(
+        (a) => a.sourcePath === node.path,
+      ))
+        await pages.answer(a, pkg.assetMap);
+      await tick();
+    }
+    for (const note of pkg.report.videoNotes) {
+      pages.text(
+        `${note.location} · ${note.kind === "transcript" ? "Transcript excerpts" : "Activity-based video notes"}`,
+        true,
+      );
+      pages.text(note.text);
+    }
+    for (const warning of pkg.report.warnings) pages.text(warning);
+    pages.flush();
+  }
+  signal?.throwIfAborted();
+  pages.save(
+    packages.length === 1
+      ? packages[0].metadata.title || packages[0].fileName
+      : "Course All Modules Bundle",
+  );
+}
+export const exportSlidesToPdf = (
+  pkg: H5PPackage,
+  onProgress?: (current: number, total: number) => void,
+  signal?: AbortSignal,
+) => exportPackages([pkg], onProgress, signal);
+export const exportBatchToPdf = exportPackages;
 export async function copySlideImageToClipboard(
   slide: any,
   slideIndex: number,
-  assetMap: Map<string, string>
-): Promise<void> {
-  const canvas = await renderSlideToCanvas(slide, slideIndex, assetMap);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) throw new Error('Failed to generate slide image.');
-
-  if (!navigator.clipboard?.write) {
-    throw new Error('Clipboard API not supported in this browser.');
-  }
-
-  await navigator.clipboard.write([
-    new ClipboardItem({ 'image/png': blob })
-  ]);
+  assetMap: Map<string, string>,
+) {
+  const c = await renderSlideToCanvas(slide, slideIndex, assetMap);
+  const blob = await new Promise<Blob | null>((resolve) =>
+    c.toBlob(resolve, "image/png"),
+  );
+  c.width = 0;
+  if (!blob || !navigator.clipboard?.write)
+    throw new Error("Image clipboard is unavailable.");
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
 }
-
 export async function downloadSlideAsPng(
   slide: any,
   slideIndex: number,
   assetMap: Map<string, string>,
-  prefixName?: string
-): Promise<void> {
-  const canvas = await renderSlideToCanvas(slide, slideIndex, assetMap);
-  const dataUrl = canvas.toDataURL('image/png');
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  const cleanPrefix = (prefixName || 'slide').replace(/[^a-zA-Z0-9_\- ]/g, '').trim();
-  a.download = `${cleanPrefix}-slide-${slideIndex + 1}.png`;
+  prefixName?: string,
+) {
+  const c = await renderSlideToCanvas(slide, slideIndex, assetMap);
+  const a = document.createElement("a");
+  a.href = c.toDataURL("image/png");
+  a.download = `${filename(prefixName || "slide")}-${slideIndex + 1}.png`;
   a.click();
-}
-
-export async function exportBatchToPdf(
-  packages: H5PPackage[],
-  onProgress?: (current: number, total: number, moduleName: string) => void
-): Promise<void> {
-  if (packages.length === 0) throw new Error('No packages to export');
-
-  let totalSlides = 0;
-  packages.forEach((p) => {
-    totalSlides += (p.content?.presentation?.slides?.length || 1);
-  });
-
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'px',
-    format: [1920, 1080],
-    hotfixes: ['px_scaling'],
-  });
-
-  let globalSlideCount = 0;
-
-  for (let pIdx = 0; pIdx < packages.length; pIdx++) {
-    const pkg = packages[pIdx];
-    const slides: any[] = pkg.content?.presentation?.slides || [];
-    const pkgTitle = pkg.metadata.title || pkg.fileName;
-
-    if (slides.length === 0) {
-      globalSlideCount++;
-      if (onProgress) onProgress(globalSlideCount, totalSlides, pkgTitle);
-      if (globalSlideCount > 1) doc.addPage([1920, 1080], 'landscape');
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 1920;
-      canvas.height = 1080;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, 1920, 1080);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(pkgTitle, 100, 120);
-      ctx.fillStyle = '#64748b';
-      ctx.font = '22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`Module Type: ${pkg.mainLibrary}`, 100, 170);
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
-      continue;
-    }
-
-    for (let sIdx = 0; sIdx < slides.length; sIdx++) {
-      globalSlideCount++;
-      if (onProgress) {
-        onProgress(globalSlideCount, totalSlides, pkgTitle);
-      }
-
-      if (globalSlideCount > 1) {
-        doc.addPage([1920, 1080], 'landscape');
-      }
-
-      const canvas = await renderSlideToCanvas(slides[sIdx], sIdx, pkg.assetMap);
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      doc.addImage(imgData, 'JPEG', 0, 0, 1920, 1080, undefined, 'FAST');
-    }
-  }
-
-  doc.save('Course_All_Modules_Bundle.pdf');
+  c.width = 0;
 }

@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 export function useTheme() {
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const saved = localStorage.getItem('h5p_theme');
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('h5p_theme'); } catch { /* Storage can be disabled. */ }
     if (saved) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -12,10 +13,10 @@ export function useTheme() {
     const root = document.documentElement;
     if (isDark) {
       root.classList.add('dark');
-      localStorage.setItem('h5p_theme', 'dark');
+      try { localStorage.setItem('h5p_theme', 'dark'); } catch { /* Theme still works in memory. */ }
     } else {
       root.classList.remove('dark');
-      localStorage.setItem('h5p_theme', 'light');
+      try { localStorage.setItem('h5p_theme', 'light'); } catch { /* Theme still works in memory. */ }
     }
   }, [isDark]);
 

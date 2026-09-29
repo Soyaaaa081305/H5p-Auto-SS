@@ -98,8 +98,52 @@ export interface H5PPackage {
   metadata: H5PMetadata;
   mainLibrary: string;
   content: Record<string, any>;
-  assetMap: Map<string, string>; // path -> objectUrl
+  assetMap: Map<string, string>; // paths resolved lazily to application-owned URLs
+  report: ExtractionReport;
+  dispose: () => void;
 }
 
-export type ViewMode = 'slides' | 'document';
-export type QuizMode = 'study' | 'worksheet';
+export type ViewMode = "slides" | "document";
+export type QuizMode = "study" | "worksheet";
+
+export type ExtractionStatus =
+  "extracted" | "partial" | "unsupported" | "missing";
+export interface ContentNode {
+  path: string;
+  library: string;
+  version?: string;
+  params: Record<string, any>;
+  location: string;
+  timestamp?: number;
+}
+export interface AnswerPart {
+  label: string;
+  values: string[];
+  images?: string[];
+  target?: { x: number; y: number };
+}
+export interface AnswerItem {
+  id: string;
+  packageName: string;
+  sourcePath: string;
+  library: string;
+  version?: string;
+  location: string;
+  timestamp?: number;
+  prompt: string;
+  parts: AnswerPart[];
+  status: ExtractionStatus;
+  explanation?: string;
+}
+export interface VideoNote {
+  sourcePath: string;
+  location: string;
+  kind: "transcript" | "activity";
+  text: string;
+}
+export interface ExtractionReport {
+  nodes: ContentNode[];
+  answers: AnswerItem[];
+  warnings: string[];
+  videoNotes: VideoNote[];
+}

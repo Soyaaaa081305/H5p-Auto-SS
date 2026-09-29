@@ -1,62 +1,63 @@
 # H5P to PDF Viewer
 
-> *yes, lahat ng mmcl student problem to*
+A local-first H5P reader with nested content viewing, answer extraction, study notes, and PDF exports. The current interface and presentation layout are retained; the **Answers** button opens a searchable answer key for one or all imported modules.
 
-A fast, 100% client-side web tool designed to extract **Blackboard / LMS H5P modules** and compile them into clean, high-resolution 1080p PDFs, presentation decks, and printable study guides.
+## Privacy
 
----
+Files are processed in a browser worker. File contents, answers, and transcripts are not uploaded. No proxy, analytics, cloud AI, external transcription, or packaged library scripts are used. Local viewing and answer extraction do not require external media requests.
 
-## 💡 What It Does
+Public HTTPS imports contact the entered host only after a user action, omit credentials and referrers, reject redirects, and time out after 60 seconds. Authentication-protected and CORS-blocked links must be downloaded separately and imported as files. Query-string links require an explicit click. External media requires a separate click and can then send network information, including the user's IP address, to its provider. Third-party players may contact additional services after activation.
 
-In university LMS platforms like Blackboard Ultra, professors often upload lecture slides and modules using **H5P Course Presentations**. These presentations embed high-resolution 1080p slide graphics and interactive quizzes (like fill-in-the-blanks or multiple choice), but Blackboard does not offer a native "Save as PDF" option, and generic extractors produce blank pages because they can't handle slide canvas images or H5P asterisk syntax.
+Only application assets are cached for offline use; imported files stay in memory. Removing modules or resetting releases their media URLs. Theme preference is the only application local-storage setting. Exported PDFs and clipboard contents are created only by the user's action.
 
-**H5P to PDF Studio** solves this completely:
-1. **1080p Full-Bleed Slide Extraction**: Automatically unpacks `.h5p` packages directly in your browser, extracting every 1920×1080 slide background and overlay cleanly.
-2. **Direct 1-Click PDF Download**: Compiles slides into a cropped 16:9 PDF using jsPDF—no browser headers, no `localhost` URLs, and zero margin distortion.
-3. **Study Guide vs. Worksheet Modes**:
-   - **Study Guide**: Automatically parses question answers (e.g., `*hard disk drive*`, `*degaussing*`) and displays them highlighted in green solution badges.
-   - **Worksheet**: Blanks out the answers (`____________`) so you can print fresh test sheets to practice.
-4. **Universal Compatibility**: Works on any device, browser, or static web host. Zero server uploads—all processing runs in-memory on your machine.
+## Answer coverage
 
----
+A shared extractor scans the entire content tree, including nested Books, Columns, Presentations, Question Sets, Interactive Videos, unknown containers, and stored branches. It records chapter, slide, source path, and video timestamp. All stored branches and questions are included, rather than just the path taken by an interactive player.
 
-## 🚀 Live Demo & Deployment
+Validated answer adapters cover these 1.x library shapes up through the listed minor version:
 
-This project is configured to automatically build and deploy via GitHub Pages:
-- **Live URL**: `https://soyaaaa081305.github.io/H5p-Auto-SS/`
+| Library | Version ceiling | Extracted information |
+| --- | --- | --- |
+| Blanks | 1.14 | Ordered blanks and accepted alternatives |
+| DragText | 1.10 | Ordered word slots |
+| DragQuestion | 1.15 | Target positions and correct-element text/images |
+| MultiChoice | 1.16 | All marked correct choices |
+| TrueFalse | 1.8 | Explicit true or false keys |
+| SingleChoiceSet | 1.11 | Stored correct choice for each question |
+| Summary | 1.10 | Stored correct statement per group |
+| MarkTheWords | 1.11 | Marked words |
 
----
+Unknown libraries/versions are shown as unsupported, with safe source details and packaged schema hints when available. Missing and partial keys are labeled separately. The application does not guess answers or execute custom H5P scoring code. Unsupported media codecs, encrypted archives, ZIP64/multipart archives, and custom runtime-generated keys are not supported. Missing library versions use the adapter only when its expected fields are present.
 
-## 🛠️ Local Development
+**Every file cannot be guaranteed to contain an answer key.** The two local laboratory acceptance cases contain 10 answer activities: 9 recoverable keys and one Summary activity with no statements/key stored. Tests verify Module 1-A's 3 blank slots, 6 drag-text slots, and multiple-choice key; Module 1-B's two single-choice questions, multiple-choice key, two summary records (one missing), and five drag targets.
 
-1. **Clone repository**:
-   ```bash
-   git clone https://github.com/Soyaaaa081305/H5p-Auto-SS.git
-   cd H5p-Auto-SS
-   ```
+The Answers view, copy function, and PDFs use the same extracted records. Full-module and batch PDFs include nested content and answer details. Slide images preserve the author coordinates; full answer pages follow separately so long answers are not confined to a slide's small overlay. PDF pages are rasterized for Unicode and image fidelity; text is not selectable. Use Copy for accessible text.
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+Video notes use only packaged transcript/caption text and associated activity text, with stored timing retained. They are source extracts, not AI-generated summaries of unseen video. A missing transcript is reported explicitly. H5P Summary questions remain distinct from these notes.
 
-3. **Run local server**:
-   ```bash
-   npm start
-   ```
-   Opens `http://localhost:5173` in your default browser.
+## Limits and resilience
 
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
+- Maximum archive: 256 MB; maximum entries: 10,000.
+- Maximum JSON document: 10 MB; maximum declared/actual expanded data: 512 MB per package.
+- Content traversal: at most 100,000 visited values and nesting depth 128.
+- Paths must be relative, unique, and traversal-free. Conflicting local/central/Unicode names are rejected.
+- Only referenced supported content media are decompressed; object URLs are created lazily. Executable libraries are never loaded.
+- Imports and exports can be cancelled. Batch import failures retain completed valid files. Reset discards pending work.
 
----
+Large collections can still exceed the memory available on a particular device. Import fewer modules at a time if necessary. Unsupported or absent assets remain labeled rather than fetched implicitly.
 
-## 📥 How to Download `.h5p` from Blackboard
+## Development and verification
 
-1. In Blackboard Ultra, open your course module containing the H5P presentation.
-2. Scroll to the bottom frame of the H5P player.
-3. Click the **Reuse** or **Download** button.
-4. Click **Download as an .h5p file**.
-5. Drag and drop the downloaded file into this website, select your mode, and click **Download PDF**!
+Use Node.js 24 (minimum 22.12):
+
+```sh
+npm ci
+npm run dev
+npm run check
+npx playwright install chromium
+npm run test:e2e
+```
+
+The browser tests use the production build, so run `npm run build` before `npm run test:e2e`. Synthetic fixtures cover nesting, alternatives, missing/custom keys, hostile HTML, archive validation, privacy, URL opt-in, cancellation, and PDF pagination. To run the optional local laboratory acceptance tests, set `H5P_SAMPLE_FILES` to the Module 1-A and Module 1-B paths separated by `|`. Original H5P files and test artifacts are ignored by Git.
+
+CI runs unit tests, the production build, a dependency audit, and browser tests on pull requests and main. Deployment to GitHub Pages requires an explicit workflow dispatch on main after verification succeeds. Nothing deploys merely because a push passes CI.
