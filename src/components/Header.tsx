@@ -19,15 +19,17 @@ export const BOOKMARKLET_CODE =
   "function isH5PUrl(u){" +
   "if(!u)return false;" +
   "var l=u.toLowerCase();" +
-  "if(l.indexOf('teams')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
-  "return l.indexOf('h5p')!==-1||l.indexOf('blti')!==-1||l.indexOf('launchlink')!==-1;" +
+  "if(l.indexOf('teams')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1||l.indexOf('ready?')!==-1||l.indexOf('ultra-ext')!==-1)return false;" +
+  "return l.indexOf('h5p')!==-1;" +
   "}" +
   "function findReuse(d){" +
-  "var el=d.querySelector('[class*=\"reuse\" i],[title*=\"reuse\" i],[aria-label*=\"reuse\" i],button.h5p-core-button,.h5p-export,a.h5p-export');" +
+  "var el=d.querySelector('.h5p-button-reuse,.h5p-reuse,button.h5p-core-button[class*=\"reuse\"],.h5p-actions .h5p-button-reuse,.h5p-actions [class*=\"reuse\"],.h5p-export,a.h5p-export');" +
   "if(el)return el;" +
-  "var all=d.querySelectorAll('button,a,[role=\"button\"]');" +
-  "for(var j=0;j<all.length;j++){" +
-  "var item=all[j];" +
+  "var container=d.querySelector('.h5p-content,.h5p-container,.h5p-iframe-wrapper,.h5p-actions,.h5p-footer');" +
+  "if(container){" +
+  "var btns=container.querySelectorAll('button,a,[role=\"button\"]');" +
+  "for(var j=0;j<btns.length;j++){" +
+  "var item=btns[j];" +
   "var txt=(item.innerText||item.textContent||'').trim().toLowerCase();" +
   "var ttl=(item.title||'').toLowerCase();" +
   "var aria=(item.getAttribute('aria-label')||'').toLowerCase();" +
@@ -36,28 +38,25 @@ export const BOOKMARKLET_CODE =
   "return item;" +
   "}" +
   "}" +
+  "}" +
   "return null;" +
   "}" +
   "function pollDownload(d){" +
   "var at=0;" +
   "var tm=setInterval(function(){" +
   "at++;" +
-  "var docs=[d,document];" +
-  "var dl=null;" +
-  "for(var di=0;di<docs.length;di++){" +
-  "var cDoc=docs[di];" +
-  "dl=cDoc.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\" i],.h5p-reuse-dialog button,[class*=\"export\" i]');" +
+  "var dl=d.querySelector('.h5p-download-button,.h5p-reuse-dialog button,.h5p-reuse-dialog a[href*=\".h5p\"],[class*=\"h5p\"][class*=\"download\"]');" +
   "if(!dl){" +
-  "var btns=cDoc.querySelectorAll('button,a');" +
+  "var dlg=d.querySelector('.h5p-reuse-dialog,.h5p-dialog');" +
+  "if(dlg){" +
+  "var btns=dlg.querySelectorAll('button,a');" +
   "for(var bi=0;bi<btns.length;bi++){" +
   "var bTxt=(btns[bi].innerText||btns[bi].textContent||'').toLowerCase();" +
   "if(bTxt.indexOf('download')!==-1||bTxt.indexOf('.h5p')!==-1){" +
-  "dl=btns[bi];" +
-  "break;" +
+  "dl=btns[bi];break;" +
   "}" +
   "}" +
   "}" +
-  "if(dl)break;" +
   "}" +
   "if(dl){" +
   "clearInterval(tm);" +
@@ -94,7 +93,7 @@ export const BOOKMARKLET_CODE =
   "return false;" +
   "}" +
   "var visited=[];" +
-  "var h5pFrame=null;" +
+  "var hasH5PFrame=false;" +
   "function walk(d,depth){" +
   "if(!d||depth>5||visited.indexOf(d)!==-1)return false;" +
   "visited.push(d);" +
@@ -102,15 +101,14 @@ export const BOOKMARKLET_CODE =
   "var frames=d.querySelectorAll('iframe,frame');" +
   "for(var f=0;f<frames.length;f++){" +
   "var frame=frames[f];" +
+  "var src=frame.src||frame.getAttribute('src')||'';" +
+  "if(isH5PUrl(src)||frame.className.indexOf('h5p')!==-1||frame.id.indexOf('h5p')!==-1){" +
+  "hasH5PFrame=true;" +
+  "}" +
   "try{" +
   "var fd=frame.contentDocument||(frame.contentWindow&&frame.contentWindow.document);" +
   "if(fd&&walk(fd,depth+1))return true;" +
-  "}catch(err){" +
-  "var src=frame.src||frame.getAttribute('src')||'';" +
-  "if(isH5PUrl(src)){" +
-  "h5pFrame=src;" +
-  "}" +
-  "}" +
+  "}catch(err){}" +
   "}" +
   "return false;" +
   "}" +
@@ -126,11 +124,11 @@ export const BOOKMARKLET_CODE =
   "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
   "return;" +
   "}" +
-  "if(h5pFrame){" +
-  "n('🔒 H5P Slide In Frame','Click below to open the H5P player in a clean tab, then click this bookmark on that page:',h5pFrame,'Open H5P Slide');" +
+  "if(hasH5PFrame){" +
+  "n('💡 Click \"⎘ Reuse\" on Slide','Blackboard protects this slide in a secure frame. Click the ⎘ Reuse button at the bottom-left of the slide ➔ \"Download as an .h5p file\", then drop it into the Converter!','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
   "return;" +
   "}" +
-  "n('⚠️ H5P Slide Not Detected On This Tab','If Blackboard opened the slide in an \"LTI Launch\" tab, please switch to that tab and click this bookmark! Or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
+  "n('⚠️ Open Slide First','Please open your course slide module on Blackboard, then click this bookmark or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
   "})();";
 
 export const Header: React.FC = () => {

@@ -61,3 +61,57 @@ it("recursively traverses nested iframes (level 1 -> level 2) to find and click 
 
   vi.useRealTimers();
 });
+
+it("ignores Blackboard MS Teams extension iframes and does not click non-H5P buttons", () => {
+  document.body.innerHTML = "";
+
+  // Simulate Blackboard MS Teams extension iframe
+  const teamsFrame = document.createElement("iframe");
+  teamsFrame.src = "https://bb-ms-teams-ultra-ext.api.blackboard.com/ready?uuid=123&code=abc";
+  document.body.appendChild(teamsFrame);
+
+  // Simulate Blackboard shell button with "reuse" in unrelated class or non-H5P button
+  let shellClicked = false;
+  const shellBtn = document.createElement("button");
+  shellBtn.className = "route-reuse-item";
+  shellBtn.textContent = "Reuse Course Content";
+  shellBtn.onclick = () => {
+    shellClicked = true;
+  };
+  document.body.appendChild(shellBtn);
+
+  // Execute bookmarklet code
+  const js = BOOKMARKLET_CODE.replace(/^javascript:/, "");
+  new Function(js)();
+
+  expect(shellClicked).toBe(false);
+
+  const toast = document.getElementById("h5p-toast");
+  expect(toast).not.toBeNull();
+  expect(toast?.textContent).toContain("Open Slide First");
+});
+
+it("shows clear instructions when H5P is in a protected cross-origin frame", () => {
+  document.body.innerHTML = "";
+
+  // Create an iframe pointing to an H5P module
+  const h5pFrame = document.createElement("iframe");
+  h5pFrame.className = "h5p-iframe";
+  h5pFrame.src = "https://mcl.h5p.com/content/12345";
+  // Simulate cross-origin security exception on contentDocument
+  Object.defineProperty(h5pFrame, "contentDocument", {
+    get() {
+      throw new DOMException("Blocked a frame with origin from accessing a cross-origin frame.", "SecurityError");
+    },
+  });
+  document.body.appendChild(h5pFrame);
+
+  // Execute bookmarklet code
+  const js = BOOKMARKLET_CODE.replace(/^javascript:/, "");
+  new Function(js)();
+
+  const toast = document.getElementById("h5p-toast");
+  expect(toast).not.toBeNull();
+  expect(toast?.textContent).toContain("Click \"⎘ Reuse\" on Slide");
+});
+
