@@ -6,7 +6,7 @@ import { useTheme } from '../lib/theme';
 
 // Resilient Bookmarklet: auto-clicks H5P reuse/download, resolves H5PIntegration export URLs,
 // excludes Blackboard system iframes (like MS Teams API), and guides students to the LTI tab
-const BOOKMARKLET_CODE =
+export const BOOKMARKLET_CODE =
   "javascript:(function(){" +
   "function n(t,m,u,l){" +
   "var i='h5p-toast',o=document.getElementById(i);if(o)o.remove();" +
@@ -16,66 +16,115 @@ const BOOKMARKLET_CODE =
   "document.body.appendChild(b);" +
   "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},7000);" +
   "}" +
-  "function isH5P(u){" +
+  "function isH5PUrl(u){" +
   "if(!u)return false;" +
   "var l=u.toLowerCase();" +
-  "if(l.indexOf('teams')!==-1||l.indexOf('blackboard.com/ready')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
-  "return l.indexOf('h5p.com')!==-1||l.indexOf('h5p.org')!==-1||l.indexOf('/h5p/')!==-1||l.indexOf('h5p-')!==-1||l.indexOf('.h5p')!==-1;" +
+  "if(l.indexOf('teams')!==-1||l.indexOf('telemetry')!==-1||l.indexOf('analytics')!==-1)return false;" +
+  "return l.indexOf('h5p')!==-1||l.indexOf('blti')!==-1||l.indexOf('launchlink')!==-1;" +
   "}" +
-  "function r(d){" +
+  "function findReuse(d){" +
+  "var el=d.querySelector('[class*=\"reuse\" i],[title*=\"reuse\" i],[aria-label*=\"reuse\" i],button.h5p-core-button,.h5p-export,a.h5p-export');" +
+  "if(el)return el;" +
+  "var all=d.querySelectorAll('button,a,[role=\"button\"]');" +
+  "for(var j=0;j<all.length;j++){" +
+  "var item=all[j];" +
+  "var txt=(item.innerText||item.textContent||'').trim().toLowerCase();" +
+  "var ttl=(item.title||'').toLowerCase();" +
+  "var aria=(item.getAttribute('aria-label')||'').toLowerCase();" +
+  "var cls=(item.className||'').toString().toLowerCase();" +
+  "if(txt==='reuse'||txt.indexOf('reuse')!==-1||ttl.indexOf('reuse')!==-1||aria.indexOf('reuse')!==-1||cls.indexOf('reuse')!==-1){" +
+  "return item;" +
+  "}" +
+  "}" +
+  "return null;" +
+  "}" +
+  "function pollDownload(d){" +
+  "var at=0;" +
+  "var tm=setInterval(function(){" +
+  "at++;" +
+  "var docs=[d,document];" +
+  "var dl=null;" +
+  "for(var di=0;di<docs.length;di++){" +
+  "var cDoc=docs[di];" +
+  "dl=cDoc.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\" i],.h5p-reuse-dialog button,[class*=\"export\" i]');" +
+  "if(!dl){" +
+  "var btns=cDoc.querySelectorAll('button,a');" +
+  "for(var bi=0;bi<btns.length;bi++){" +
+  "var bTxt=(btns[bi].innerText||btns[bi].textContent||'').toLowerCase();" +
+  "if(bTxt.indexOf('download')!==-1||bTxt.indexOf('.h5p')!==-1){" +
+  "dl=btns[bi];" +
+  "break;" +
+  "}" +
+  "}" +
+  "}" +
+  "if(dl)break;" +
+  "}" +
+  "if(dl){" +
+  "clearInterval(tm);" +
+  "dl.click();" +
+  "}else if(at>35){" +
+  "clearInterval(tm);" +
+  "}" +
+  "},100);" +
+  "}" +
+  "function processDoc(d){" +
   "try{" +
   "var w=d.defaultView||window;" +
   "if(w.H5PIntegration&&w.H5PIntegration.contents){" +
   "for(var k in w.H5PIntegration.contents){" +
   "var c=w.H5PIntegration.contents[k];" +
   "if(c&&c.exportUrl){" +
-  "var a=d.createElement('a');a.href=c.exportUrl;a.download=(c.metadata&&c.metadata.title?c.metadata.title:'module')+'.h5p';" +
-  "d.body.appendChild(a);a.click();a.remove();return true;" +
+  "var a=d.createElement('a');" +
+  "a.href=c.exportUrl;" +
+  "a.download=(c.metadata&&c.metadata.title?c.metadata.title:'module')+'.h5p';" +
+  "d.body.appendChild(a);" +
+  "a.click();" +
+  "a.remove();" +
+  "return true;" +
   "}" +
   "}" +
   "}" +
   "}catch(e){}" +
-  "var btn=d.querySelector('.h5p-reuse,button.h5p-reuse,button[aria-label*=\"Reuse\" i],.h5p-export,a.h5p-export');" +
+  "var btn=findReuse(d);" +
   "if(btn){" +
   "btn.click();" +
-  "var at=0,tm=setInterval(function(){" +
-  "at++;" +
-  "var dl=d.querySelector('.h5p-download-button,a[href*=\".h5p\"],button[class*=\"download\"],.h5p-reuse-dialog button');" +
-  "if(dl){clearInterval(tm);dl.click();}" +
-  "else if(at>25){clearInterval(tm);}" +
-  "},100);" +
+  "pollDownload(d);" +
   "return true;" +
   "}" +
   "return false;" +
   "}" +
-  "if(r(document)){" +
-  "n('✅ H5P Download Triggered','Module downloading! Opening H5P to PDF Converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
-  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
-  "return;" +
-  "}" +
-  "var dlLink=document.querySelector('a[href*=\".h5p\"]');" +
-  "if(dlLink&&dlLink.href){" +
-  "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
-  "var a2=document.createElement('a');a2.href=dlLink.href;a2.download='';" +
-  "document.body.appendChild(a2);a2.click();a2.remove();" +
-  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
-  "return;" +
-  "}" +
-  "var fs=document.querySelectorAll('iframe'),h5pFrame=null;" +
-  "for(var i=0;i<fs.length;i++){" +
+  "var visited=[];" +
+  "var h5pFrame=null;" +
+  "function walk(d,depth){" +
+  "if(!d||depth>5||visited.indexOf(d)!==-1)return false;" +
+  "visited.push(d);" +
+  "if(processDoc(d))return true;" +
+  "var frames=d.querySelectorAll('iframe,frame');" +
+  "for(var f=0;f<frames.length;f++){" +
+  "var frame=frames[f];" +
   "try{" +
-  "var fd=fs[i].contentDocument||(fs[i].contentWindow&&fs[i].contentWindow.document);" +
-  "if(fd&&r(fd)){" +
-  "n('✅ H5P Download Triggered','Module found inside frame! Downloading...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "var fd=frame.contentDocument||(frame.contentWindow&&frame.contentWindow.document);" +
+  "if(fd&&walk(fd,depth+1))return true;" +
+  "}catch(err){" +
+  "var src=frame.src||frame.getAttribute('src')||'';" +
+  "if(isH5PUrl(src)){" +
+  "h5pFrame=src;" +
+  "}" +
+  "}" +
+  "}" +
+  "return false;" +
+  "}" +
+  "var directDl=document.querySelector('a[href*=\".h5p\"]');" +
+  "if(directDl&&directDl.href){" +
+  "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "var a2=document.createElement('a');a2.href=directDl.href;a2.download='';document.body.appendChild(a2);a2.click();a2.remove();" +
   "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
   "return;" +
   "}" +
-  "}catch(e){" +
-  "var s=fs[i].src||fs[i].getAttribute('src')||'';" +
-  "if(isH5P(s)){" +
-  "h5pFrame=s;" +
-  "}" +
-  "}" +
+  "if(walk(document,0)){" +
+  "n('✅ H5P Download Triggered','Module found & downloading! Opening H5P to PDF Converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
+  "return;" +
   "}" +
   "if(h5pFrame){" +
   "n('🔒 H5P Slide In Frame','Click below to open the H5P player in a clean tab, then click this bookmark on that page:',h5pFrame,'Open H5P Slide');" +
