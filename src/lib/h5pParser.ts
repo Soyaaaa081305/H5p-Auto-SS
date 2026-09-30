@@ -1,7 +1,6 @@
 import type { H5PPackage } from "../types/h5p";
 import type { readArchive } from "./archive";
 import { LIMITS, normalizePath } from "./archiveLimits";
-import { externalUrl } from "./security";
 const ownedUrls = new Set<string>();
 class AssetMap extends Map<string, string> {
   constructor(private blobs: Map<string, Blob>) {
@@ -106,54 +105,4 @@ export function revokeAssets(assetMap: Map<string, string>) {
     URL.revokeObjectURL(url);
   }
   assetMap.clear();
-}
-export async function fetchH5PFromUrl(
-  value: string,
-  signal?: AbortSignal,
-): Promise<H5PPackage> {
-  if (/blackboard\.com|instructure\.com|canvas|moodle|\/lti\//i.test(value)) {
-    throw new Error(
-      "School portals (Blackboard, Canvas, Moodle) require student login and block external URL downloads. To view this module, click 'Reuse' at the bottom-left of the slide on Blackboard to download the .h5p file, then upload it in the Upload tab."
-    );
-  }
-  const url = externalUrl(value);
-  if (!url)
-    throw new Error(
-      "Enter a public HTTPS H5P URL without embedded credentials.",
-    );
-  const timeout = AbortSignal.timeout(60000);
-  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-  const response = await fetch(url, {
-    credentials: "omit",
-    referrerPolicy: "no-referrer",
-    signal: requestSignal,
-    redirect: "error",
-  });
-  if (!response.ok || !response.body)
-    throw new Error(
-      "Unable to download this public file. Download it yourself and import it locally.",
-    );
-  if (Number(response.headers.get("content-length")) > LIMITS.archive) {
-    await response.body.cancel();
-    throw new Error("Download exceeds the 256 MB limit.");
-  }
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    while (true) {
-      signal?.throwIfAborted();
-      const { value, done } = await reader.read();
-      if (done) break;
-      total += value.length;
-      if (total > LIMITS.archive)
-        throw new Error("Download exceeds the 256 MB limit.");
-      chunks.push(value);
-    }
-  } finally {
-    await reader.cancel();
-    reader.releaseLock();
-  }
-  const fileName = new URL(url).pathname.split("/").pop() || "module.h5p";
-  return parseH5PFile(new Blob(chunks as BlobPart[]), fileName, signal);
 }

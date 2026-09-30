@@ -26,7 +26,8 @@
     color-adjust: exact !important;
   }
 
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;

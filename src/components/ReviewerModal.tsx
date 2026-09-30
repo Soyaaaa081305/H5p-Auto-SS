@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Copy, Download, BookOpen, Search, Check, Video, Loader2, ChevronDown } from "lucide-react";
+import {
+  X,
+  Copy,
+  Download,
+  BookOpen,
+  Search,
+  Check,
+  Video,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 import type { H5PPackage } from "../types/h5p";
 import { DragTargetPreview } from "./DragTargetPreview";
 import { AnswerCards } from "./AnswerCards";
 import { answerText, statusLabel } from "../lib/extraction";
-import { exportAnswerKey } from "../lib/pdfExporter";
 
 interface Props {
   pkg: H5PPackage;
@@ -68,7 +77,10 @@ export function ReviewerModal({
     };
   }, [isOpen, onClose]);
 
-  const selected = useMemo(() => (all ? packages : [pkg]), [all, packages, pkg]);
+  const selected = useMemo(
+    () => (all ? packages : [pkg]),
+    [all, packages, pkg],
+  );
 
   const { groups, answers } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -142,7 +154,10 @@ export function ReviewerModal({
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="answers-title" className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-sans flex items-center gap-2">
+              <h2
+                id="answers-title"
+                className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-sans flex items-center gap-2"
+              >
                 Answers
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
@@ -214,6 +229,7 @@ export function ReviewerModal({
               exportController.current = new AbortController();
               setExporting(true);
               try {
+                const { exportAnswerKey } = await import("../lib/pdfExporter");
                 await exportAnswerKey(
                   selected,
                   answers,
@@ -274,7 +290,8 @@ export function ReviewerModal({
                   {group.pkg.metadata.title || group.pkg.fileName}
                 </h3>
                 <span className="text-xs text-zinc-400 font-mono ml-auto flex-shrink-0">
-                  {group.answers.length} {group.answers.length === 1 ? "activity" : "activities"}
+                  {group.answers.length}{" "}
+                  {group.answers.length === 1 ? "activity" : "activities"}
                 </span>
               </div>
 
@@ -335,14 +352,19 @@ export function ReviewerModal({
                   </summary>
                   <div className="space-y-3 mt-3">
                     {group.pkg.report.videoNotes.map((n, j) => (
-                      <div key={j} className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-200/80 dark:border-zinc-800 text-xs">
+                      <div
+                        key={j}
+                        className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-200/80 dark:border-zinc-800 text-xs"
+                      >
                         <h4 className="font-semibold text-zinc-800 dark:text-zinc-200">
                           {n.location} ·{" "}
                           {n.kind === "transcript"
                             ? "Packaged transcript excerpts"
                             : "Activity-based notes"}
                         </h4>
-                        <p className="whitespace-pre-line mt-2 text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans">{n.text}</p>
+                        <p className="whitespace-pre-line mt-2 text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans">
+                          {n.text}
+                        </p>
                       </div>
                     ))}
                   </div>

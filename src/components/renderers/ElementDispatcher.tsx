@@ -33,14 +33,16 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
   if (library === "H5P.Image")
     return <SafeMedia path={p.file?.path} alt={p.alt} assetMap={assetMap} />;
   if (library === "H5P.Video" || library === "H5P.Audio") {
-    const list = p.sources || p.files || p.video?.files || p.video?.sources || [];
+    const list =
+      p.sources || p.files || p.video?.files || p.video?.sources || [];
     const arr = Array.isArray(list) ? list : [list];
     const ytSource = arr.find((s: any) => {
       const sp = typeof s === "string" ? s : s?.path || s?.url;
       return Boolean(extractYouTubeId(sp));
     });
     const chosen = ytSource || arr[0];
-    const mediaPath = typeof chosen === "string" ? chosen : chosen?.path || chosen?.url;
+    const mediaPath =
+      typeof chosen === "string" ? chosen : chosen?.path || chosen?.url;
     return (
       <SafeMedia
         path={mediaPath}
@@ -92,7 +94,12 @@ const Dispatch: React.FC<Props> = ({ action, assetMap }) => {
       >
         <ExternalLink className="w-3.5 h-3.5" />
         <span>
-          {p.title || (ytId ? "Watch on YouTube" : isCanva ? "Open in Canva" : "Open Link")}
+          {p.title ||
+            (ytId
+              ? "Watch on YouTube"
+              : isCanva
+                ? "Open in Canva"
+                : "Open Link")}
         </span>
       </a>
     ) : (

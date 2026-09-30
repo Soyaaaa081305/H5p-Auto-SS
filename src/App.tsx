@@ -142,7 +142,6 @@ export default function App() {
             onFilesLoaded={(files) => importFiles(files)}
             isLoading={!!loading}
             loadingMessage={loading}
-            error={null}
           />
         )}
       </main>

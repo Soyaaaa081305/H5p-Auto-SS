@@ -1,11 +1,11 @@
-import React from 'react';
+import React from "react";
 
 interface LogoProps {
   className?: string;
   size?: number;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
+export const Logo: React.FC<LogoProps> = ({ className = "", size = 32 }) => {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       {/* Bespoke Geometric Emblem */}
@@ -16,6 +16,8 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="flex-shrink-0"
+        aria-hidden="true"
+        focusable="false"
       >
         {/* Base layer sheet */}
         <rect
@@ -42,22 +44,46 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
           strokeWidth="1.25"
         />
         {/* Precision editorial grid lines on front sheet */}
-        <line x1="18" y1="13" x2="26.5" y2="13" className="stroke-zinc-900 dark:stroke-zinc-900" strokeWidth="1.75" strokeLinecap="round" />
-        <line x1="18" y1="17.5" x2="24" y2="17.5" stroke="#71717a" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="18" y1="22" x2="26" y2="22" stroke="#71717a" strokeWidth="1.5" strokeLinecap="round" />
+        <line
+          x1="18"
+          y1="13"
+          x2="26.5"
+          y2="13"
+          className="stroke-zinc-900 dark:stroke-zinc-900"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+        />
+        <line
+          x1="18"
+          y1="17.5"
+          x2="24"
+          y2="17.5"
+          stroke="#71717a"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="18"
+          y1="22"
+          x2="26"
+          y2="22"
+          stroke="#71717a"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
         {/* Accent focal dot */}
         <circle cx="27" cy="17.5" r="1.5" fill="#ef4444" />
       </svg>
 
       <div className="flex flex-col">
-        <div className="flex items-center gap-1.5">
+        <h1 className="m-0 flex items-center gap-1.5">
           <span className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 text-sm font-sans transition-colors">
             H5P to PDF
           </span>
           <span className="text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors">
             Converter
           </span>
-        </div>
+        </h1>
       </div>
     </div>
   );

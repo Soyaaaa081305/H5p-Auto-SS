@@ -136,7 +136,9 @@ const adapters: Record<string, Adapter> = {
     })),
   "H5P.Summary": (p) => {
     const rawSummaries = list(p.summaries || p.summary || p.statements);
-    const intro = plainText(p.intro || p.question || p.taskDescription) || "Choose the correct statement";
+    const intro =
+      plainText(p.intro || p.question || p.taskDescription) ||
+      "Choose the correct statement";
 
     if (!rawSummaries.length) {
       return [
@@ -154,7 +156,9 @@ const adapters: Record<string, Adapter> = {
       if (Array.isArray(s)) {
         stList = s;
       } else if (record(s)) {
-        stList = list(s.summary || s.statements || s.options || s.answers || s.choices);
+        stList = list(
+          s.summary || s.statements || s.options || s.answers || s.choices,
+        );
         if (!stList.length) {
           const single = s.statement || s.text || s.label;
           if (single) stList = [single];
@@ -170,12 +174,17 @@ const adapters: Record<string, Adapter> = {
           correctVal = plainText(first);
         } else if (record(first)) {
           correctVal = plainText(
-            first.text || first.statement || first.label || first.summary || first.answer,
+            first.text ||
+              first.statement ||
+              first.label ||
+              first.summary ||
+              first.answer,
           );
         }
       }
 
-      const prompt = (record(s) && plainText(s.tip || s.intro || s.question)) || intro;
+      const prompt =
+        (record(s) && plainText(s.tip || s.intro || s.question)) || intro;
 
       return {
         prompt,

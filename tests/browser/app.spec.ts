@@ -6,13 +6,19 @@ const upload = async (page: any, buffer: Buffer, name = "sample.h5p") =>
     .locator("input[type=file]")
     .first()
     .setInputFiles({ name, mimeType: "application/zip", buffer });
-test("local book answers, privacy, media opt-in, clipboard, PDF and responsive design", async ({
+test("local answers, external media, clipboard, PDF and responsive design", async ({
   page,
   context,
 }, info) => {
   const outside: string[] = [],
-    errors: string[] = [];
+    errors: string[] = [],
+    exportRequests: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("request", (request) => {
+    if (/(?:jspdf|pdfExporter)/i.test(request.url())) {
+      exportRequests.push(request.url());
+    }
+  });
   await context.route("https://**/*", (route) => {
     outside.push(route.request().url());
     return route.fulfill({
@@ -22,13 +28,15 @@ test("local book answers, privacy, media opt-in, clipboard, PDF and responsive d
   });
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "H5P to PDF Converter" }),
+  ).toBeVisible();
+  expect(exportRequests).toEqual([]);
   await upload(page, await archive());
   await expect(
     page.getByRole("button", { name: "Answers", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.locator('iframe[src*="youtube"]'),
-  ).toBeVisible();
+  await expect(page.locator('iframe[src*="youtube"]')).toBeVisible();
   await page.getByRole("button", { name: "Answers", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("status")).toContainText("8 answer activities");
@@ -45,6 +53,9 @@ test("local book answers, privacy, media opt-in, clipboard, PDF and responsive d
   const download = page.waitForEvent("download");
   await dialog.getByRole("button", { name: "Answer PDF" }).click();
   const pdf = await download;
+  expect(exportRequests.some((url) => /(?:jspdf|pdfExporter)/i.test(url))).toBe(
+    true,
+  );
   await pdf.saveAs(info.outputPath("answers.pdf"));
   expect(
     (await readFile(info.outputPath("answers.pdf"))).subarray(0, 4).toString(),
@@ -216,23 +227,132 @@ test("local worker import can be cancelled before it completes", async ({
 });
 test("service worker excludes imported content and caches only application assets", async ({
   page,
+  context,
 }) => {
   await page.goto("/");
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => {}));
   await page.reload();
   await upload(page, await archive());
   await page.getByRole("button", { name: "Answers", exact: true }).click();
-  const urls = await page.evaluate(async () => {
-    const cache = await caches.open("h5p-pdf-shell-v2");
-    return (await cache.keys()).map((r) => r.url);
+  await page.getByRole("button", { name: "Close answers" }).click();
+  const cache = await page.evaluate(async () => {
+    const names = (await caches.keys()).filter((name) =>
+      name.startsWith("h5p-pdf-shell-"),
+    );
+    const urls = (
+      await Promise.all(
+        names.map(async (name) =>
+          (await (await caches.open(name)).keys()).map((r) => r.url),
+        ),
+      )
+    ).flat();
+    return { names, urls, origin: new URL(location.href).origin };
   });
-  expect(urls.every((url) => !url.includes(".h5p") && !url.includes("?"))).toBe(
-    true,
-  );
+  expect(cache.names).toContain("h5p-pdf-shell-v3");
+  expect(cache.urls.length).toBeGreaterThan(3);
+  expect(
+    cache.urls.every((url) => {
+      const parsed = new URL(url);
+      return (
+        parsed.origin === cache.origin &&
+        !parsed.search &&
+        !parsed.pathname.toLowerCase().endsWith(".h5p") &&
+        (parsed.pathname === "/" ||
+          ["/index.html", "/manifest.webmanifest", "/icon.svg"].includes(
+            parsed.pathname,
+          ) ||
+          /^\/assets\/[\w.-]+\.(js|css|woff2?|png|svg)$/.test(parsed.pathname))
+      );
+    }),
+  ).toBe(true);
+  const removedPresentation = await page.request.get("/sample-module.h5p");
+  if (removedPresentation.status() === 200) {
+    expect(removedPresentation.headers()["content-type"]).toContain(
+      "text/html",
+    );
+  } else {
+    expect(removedPresentation.status()).toBe(404);
+  }
+  expect(
+    (await removedPresentation.body()).subarray(0, 4).toString("hex"),
+  ).not.toBe("504b0304");
+
+  try {
+    await context.setOffline(true);
+    await page.reload();
+    await expect(
+      page.getByText(
+        "Drop one or more .h5p or .zip files here, or click to browse",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Answers", exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test("file selection and both help dialogs work from the keyboard", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const blackboardHelp = page.getByRole("button", {
+    name: "How to download from Blackboard",
+  });
+  await blackboardHelp.click();
+  const blackboardDialog = page.getByRole("dialog", {
+    name: "How to download from Blackboard",
+  });
+  await expect(blackboardDialog).toBeVisible();
+  await expect(
+    blackboardDialog.getByRole("button", {
+      name: "Close Blackboard download guide",
+    }),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    blackboardDialog.getByRole("button", { name: "Got It!" }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(blackboardDialog).toHaveCount(0);
+  await expect(blackboardHelp).toBeFocused();
+
+  const fileInput = page.locator('input[type="file"]').first();
+  await page.keyboard.press("Shift+Tab");
+  await expect(fileInput).toBeFocused();
+  const fileChooser = page.waitForEvent("filechooser");
+  await page.keyboard.press("Enter");
+  await (
+    await fileChooser
+  ).setFiles({
+    name: "keyboard.h5p",
+    mimeType: "application/zip",
+    buffer: await archive(),
+  });
+  await expect(
+    page.getByRole("button", { name: "Answers", exact: true }),
+  ).toBeVisible();
+
+  const bookmark = page.getByRole("link", { name: "Add Bookmark" });
+  await bookmark.click();
+  const bookmarkDialog = page.getByRole("dialog", {
+    name: "H5P to PDF Quick Bookmark",
+  });
+  await expect(bookmarkDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(bookmarkDialog).toHaveCount(0);
+  await expect(bookmark).toBeFocused();
 });
 test("presentation navigation, dark mode and PNG export retain slide geometry", async ({
   page,
 }, info) => {
+  const exportRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/(?:jspdf|pdfExporter)/i.test(request.url())) {
+      exportRequests.push(request.url());
+    }
+  });
   const content = {
     presentation: {
       slides: [
@@ -265,6 +385,7 @@ test("presentation navigation, dark mode and PNG export retain slide geometry", 
     },
   };
   await page.goto("/");
+  expect(exportRequests).toEqual([]);
   await upload(page, await archive(content, "H5P.CoursePresentation"));
   await expect(page.getByText("First slide", { exact: true })).toBeVisible();
   await page
@@ -282,6 +403,9 @@ test("presentation navigation, dark mode and PNG export retain slide geometry", 
   const dl = page.waitForEvent("download");
   await page.getByTitle("Download 1080p slide PNG").first().click();
   await (await dl).saveAs(info.outputPath("slide.png"));
+  expect(exportRequests.some((url) => /(?:jspdf|pdfExporter)/i.test(url))).toBe(
+    true,
+  );
   const bytes = await readFile(info.outputPath("slide.png"));
   expect(bytes.readUInt32BE(16)).toBe(1920);
   expect(bytes.readUInt32BE(20)).toBe(1080);

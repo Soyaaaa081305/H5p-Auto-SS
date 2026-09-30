@@ -15,7 +15,7 @@ it("opens converter website in new tab when executed", () => {
 
   expect(openSpy).toHaveBeenCalledWith(
     "https://soyaaaa081305.github.io/H5p-Auto-SS/",
-    "_blank"
+    "_blank",
   );
 
   openSpy.mockRestore();
