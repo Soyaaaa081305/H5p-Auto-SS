@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Logo } from './Logo';
-import { Bookmark, Sun, Moon, Check, X, Sparkles } from 'lucide-react';
+import { Bookmark, Sun, Moon, Check, X } from 'lucide-react';
 import { useTheme } from '../lib/theme';
 
 // 1-Click Bookmark: Instantly opens the H5P to PDF Converter from any tab or Blackboard
@@ -82,7 +82,7 @@ export const Header: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center">
                     <Bookmark className="w-4 h-4" />
                   </div>
                   <div>
@@ -90,7 +90,7 @@ export const Header: React.FC = () => {
                       H5P to PDF Quick Bookmark
                     </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
-                      1-click shortcut to launch the Converter from anywhere
+                      Shortcut to open the Converter from any tab or LMS page
                     </p>
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export const Header: React.FC = () => {
               </div>
 
               {/* Status Banner */}
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-center gap-2.5 text-xs text-emerald-950 dark:text-emerald-200 font-medium">
+              <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center gap-2.5 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
                 <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <span>
                   {copied
@@ -121,12 +121,12 @@ export const Header: React.FC = () => {
                 <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-850/60 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      Option 1: Drag to Bookmarks Bar (Instant)
+                      Option 1: Drag to Bookmarks Bar
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-400">Recommended</span>
+                    <span className="text-[10px] font-mono text-zinc-400">Quickest</span>
                   </div>
                   <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                    Make sure your browser's bookmarks bar is visible (<kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 font-mono text-[10px]">Cmd+Shift+B</kbd> on Mac or <kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 font-mono text-[10px]">Ctrl+Shift+B</kbd> on Windows), then drag this button directly onto it:
+                    Make sure your bookmarks bar is visible (<kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 font-mono text-[10px]">Cmd+Shift+B</kbd> on Mac or <kbd className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 font-mono text-[10px]">Ctrl+Shift+B</kbd> on Windows), then drag this button directly onto it:
                   </p>
                   <div className="pt-1 flex justify-center">
                     <a
@@ -136,7 +136,7 @@ export const Header: React.FC = () => {
                       onClick={(e) => e.preventDefault()}
                     >
                       <Bookmark className="w-4 h-4" />
-                      <span>Drag Me to Bookmarks Bar</span>
+                      <span>Drag to Bookmarks Bar</span>
                     </a>
                   </div>
                 </div>
@@ -150,25 +150,6 @@ export const Header: React.FC = () => {
                     Press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-mono text-[10px]">Cmd+D</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-mono text-[10px]">Ctrl+D</kbd> right now to bookmark this converter page directly.
                   </p>
                 </div>
-              </div>
-
-              {/* How to use */}
-              <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs space-y-2 leading-relaxed">
-                <div className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100">
-                  <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>How to convert your Blackboard slides:</span>
-                </div>
-                <ol className="list-decimal pl-5 space-y-1 text-zinc-600 dark:text-zinc-400">
-                  <li>
-                    On Blackboard, look at the bottom-left corner of any slide and click <strong>⎘ Reuse</strong>.
-                  </li>
-                  <li>
-                    Click <strong>"Download as an .h5p file"</strong>.
-                  </li>
-                  <li>
-                    Click your <strong>H5P to PDF</strong> bookmark to jump right here and drop the file!
-                  </li>
-                </ol>
               </div>
 
               {/* Close Button */}

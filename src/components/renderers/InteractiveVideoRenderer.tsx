@@ -1,5 +1,6 @@
 import { ElementDispatcher } from "./ElementDispatcher";
 import { SafeMedia, extractYouTubeId } from "../SafeMedia";
+import { Clock } from "lucide-react";
 
 export function InteractiveVideoRenderer({
   content,
@@ -62,9 +63,12 @@ export function InteractiveVideoRenderer({
             <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
               Checkpoint {index + 1}
             </span>
-            <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
-              ⏱ {Math.floor((i.duration?.from || 0) / 60)}:
-              {String(Math.floor((i.duration?.from || 0) % 60)).padStart(2, "0")}
+            <span className="inline-flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
+              <Clock className="w-3 h-3 text-indigo-500" />
+              <span>
+                {Math.floor((i.duration?.from || 0) / 60)}:
+                {String(Math.floor((i.duration?.from || 0) % 60)).padStart(2, "0")}
+              </span>
             </span>
           </div>
           <ElementDispatcher action={i.action} assetMap={assetMap} />

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Plus, FileCode2, Sparkles, CheckCircle2, X } from 'lucide-react';
+import { Loader2, Plus, FileCode2, HelpCircle, CheckCircle2, X } from 'lucide-react';
 
 interface DropZoneProps {
   onFilesLoaded: (files: File[]) => Promise<void>;
@@ -111,7 +111,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           onClick={() => setShowHelpModal(true)}
           className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors py-1.5 px-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-850 font-medium"
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <HelpCircle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
           <span>How to download from Blackboard (2 quick clicks)</span>
         </button>
       </div>
@@ -132,8 +132,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center">
+                    <HelpCircle className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-sans">

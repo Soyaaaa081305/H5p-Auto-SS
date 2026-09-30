@@ -402,7 +402,7 @@ class Pages {
 
     // Header Row: Location Pill + Status Pill
     this.ctx.save();
-    const locText = `📍 ${a.location || "Activity"}`;
+    const locText = a.location || "Activity";
     this.ctx.font = "bold 11px monospace";
     const locW = this.ctx.measureText(locText).width + 16;
     drawRoundRect(

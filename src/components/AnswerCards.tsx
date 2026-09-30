@@ -1,7 +1,7 @@
 import type { AnswerItem } from "../types/h5p";
 import { statusLabel } from "../lib/extraction";
 import { SafeMedia } from "./SafeMedia";
-import { CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, HelpCircle, MapPin } from "lucide-react";
 
 export function AnswerCards({
   answers,
@@ -26,8 +26,9 @@ export function AnswerCards({
             {/* Card Header: Location, Library Type, Status */}
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[11px] font-semibold">
-                  📍 {answer.location || "Activity"}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[11px] font-semibold">
+                  <MapPin className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+                  <span>{answer.location || "Activity"}</span>
                 </span>
                 {answer.library && (
                   <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-zinc-50 dark:bg-zinc-850 text-zinc-500 dark:text-zinc-400 font-mono text-[10px] border border-zinc-200/60 dark:border-zinc-800">
