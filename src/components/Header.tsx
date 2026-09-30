@@ -16,6 +16,16 @@ export const BOOKMARKLET_CODE =
   "document.body.appendChild(b);" +
   "if(!u)setTimeout(function(){if(b.parentNode)b.remove();},7000);" +
   "}" +
+  "function showPointer(){" +
+  "var pi='h5p-pointer',po=document.getElementById(pi);if(po)po.remove();" +
+  "var p=document.createElement('div');p.id=pi;" +
+  "p.style.cssText='position:fixed;bottom:28px;left:24px;z-index:9999999;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(79,70,229,0.5);display:flex;align-items:center;gap:8px;cursor:pointer;animation:h5pBounce 1.5s infinite;';" +
+  "p.innerHTML='<span>👉 Click ⎘ Reuse right here ➔ Download</span><span style=\"opacity:0.7;font-size:14px;\">&times;</span>';" +
+  "p.onclick=function(){p.remove();};" +
+  "var st=document.getElementById('h5p-anim');if(!st){st=document.createElement('style');st.id='h5p-anim';st.textContent='@keyframes h5pBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}';document.head.appendChild(st);}" +
+  "document.body.appendChild(p);" +
+  "setTimeout(function(){if(p.parentNode)p.remove();},12000);" +
+  "}" +
   "function isH5PUrl(u){" +
   "if(!u)return false;" +
   "var l=u.toLowerCase();" +
@@ -25,18 +35,18 @@ export const BOOKMARKLET_CODE =
   "function findReuse(d){" +
   "var el=d.querySelector('.h5p-button-reuse,.h5p-reuse,button.h5p-core-button[class*=\"reuse\"],.h5p-actions .h5p-button-reuse,.h5p-actions [class*=\"reuse\"],.h5p-export,a.h5p-export');" +
   "if(el)return el;" +
-  "var container=d.querySelector('.h5p-content,.h5p-container,.h5p-iframe-wrapper,.h5p-actions,.h5p-footer');" +
-  "if(container){" +
-  "var btns=container.querySelectorAll('button,a,[role=\"button\"]');" +
-  "for(var j=0;j<btns.length;j++){" +
-  "var item=btns[j];" +
+  "var all=d.querySelectorAll('button,a,[role=\"button\"]');" +
+  "for(var j=0;j<all.length;j++){" +
+  "var item=all[j];" +
   "var txt=(item.innerText||item.textContent||'').trim().toLowerCase();" +
   "var ttl=(item.title||'').toLowerCase();" +
   "var aria=(item.getAttribute('aria-label')||'').toLowerCase();" +
   "var cls=(item.className||'').toString().toLowerCase();" +
-  "if(txt==='reuse'||txt.indexOf('reuse')!==-1||ttl.indexOf('reuse')!==-1||aria.indexOf('reuse')!==-1||cls.indexOf('reuse')!==-1){" +
+  "if((cls.indexOf('h5p')!==-1||Boolean(item.closest&&item.closest('[class*=\"h5p\"]')))&&(txt==='reuse'||txt.indexOf('reuse')!==-1||ttl.indexOf('reuse')!==-1||aria.indexOf('reuse')!==-1||cls.indexOf('reuse')!==-1)){" +
   "return item;" +
   "}" +
+  "if(txt==='reuse'&&!item.closest('.base-navigation,.course-outline,[id*=\"menu\"],[id*=\"nav\"]')){" +
+  "return item;" +
   "}" +
   "}" +
   "return null;" +
@@ -93,7 +103,6 @@ export const BOOKMARKLET_CODE =
   "return false;" +
   "}" +
   "var visited=[];" +
-  "var hasH5PFrame=false;" +
   "function walk(d,depth){" +
   "if(!d||depth>5||visited.indexOf(d)!==-1)return false;" +
   "visited.push(d);" +
@@ -101,10 +110,6 @@ export const BOOKMARKLET_CODE =
   "var frames=d.querySelectorAll('iframe,frame');" +
   "for(var f=0;f<frames.length;f++){" +
   "var frame=frames[f];" +
-  "var src=frame.src||frame.getAttribute('src')||'';" +
-  "if(isH5PUrl(src)||frame.className.indexOf('h5p')!==-1||frame.id.indexOf('h5p')!==-1){" +
-  "hasH5PFrame=true;" +
-  "}" +
   "try{" +
   "var fd=frame.contentDocument||(frame.contentWindow&&frame.contentWindow.document);" +
   "if(fd&&walk(fd,depth+1))return true;" +
@@ -112,6 +117,8 @@ export const BOOKMARKLET_CODE =
   "}" +
   "return false;" +
   "}" +
+  "var loc=window.location.href.toLowerCase();" +
+  "var isSlideTab=loc.indexOf('launchframe')!==-1||loc.indexOf('blti')!==-1||loc.indexOf('launchlink')!==-1||Boolean(document.querySelector('iframe[src*=\"launchLink\"],iframe[src*=\"blti\"],#classic-learn-iframe'));" +
   "var directDl=document.querySelector('a[href*=\".h5p\"]');" +
   "if(directDl&&directDl.href){" +
   "n('✅ Direct H5P Link Found','Starting download and opening converter...','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
@@ -124,11 +131,12 @@ export const BOOKMARKLET_CODE =
   "setTimeout(function(){window.open('https://soyaaaa081305.github.io/H5p-Auto-SS/','_blank');},1500);" +
   "return;" +
   "}" +
-  "if(hasH5PFrame){" +
-  "n('💡 Click \"⎘ Reuse\" on Slide','Blackboard protects this slide in a secure frame. Click the ⎘ Reuse button at the bottom-left of the slide ➔ \"Download as an .h5p file\", then drop it into the Converter!','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
+  "if(isSlideTab){" +
+  "showPointer();" +
+  "n('💡 Slide Detected: 1 Click Away!','Due to Blackboard security, click the ⎘ Reuse button at the bottom-left of the slide ➔ \"Download as an .h5p file\", then drop it into the Converter!','https://soyaaaa081305.github.io/H5p-Auto-SS/','Go to Converter');" +
   "return;" +
   "}" +
-  "n('⚠️ Open Slide First','Please open your course slide module on Blackboard, then click this bookmark or look for the ⎘ Reuse button at the bottom-left of the slide.');" +
+  "n('⚠️ Open Slide First','Please open your course slide module on Blackboard (e.g. 2.1 - Memory and Remanence), then click this bookmark!');" +
   "})();";
 
 export const Header: React.FC = () => {

@@ -91,20 +91,21 @@ it("ignores Blackboard MS Teams extension iframes and does not click non-H5P but
   expect(toast?.textContent).toContain("Open Slide First");
 });
 
-it("shows clear instructions when H5P is in a protected cross-origin frame", () => {
+it("shows clear instructions and floating pointer when slide tab is detected", () => {
   document.body.innerHTML = "";
 
-  // Create an iframe pointing to an H5P module
-  const h5pFrame = document.createElement("iframe");
-  h5pFrame.className = "h5p-iframe";
-  h5pFrame.src = "https://mcl.h5p.com/content/12345";
-  // Simulate cross-origin security exception on contentDocument
-  Object.defineProperty(h5pFrame, "contentDocument", {
-    get() {
-      throw new DOMException("Blocked a frame with origin from accessing a cross-origin frame.", "SecurityError");
+  // Mock window.location to simulate Blackboard LTI launchFrame
+  Object.defineProperty(window, "location", {
+    value: {
+      href: "https://mcl.blackboard.com/ultra/courses/_61640_1/lti/launchFrame?toolHref=launchLink",
     },
+    writable: true,
   });
-  document.body.appendChild(h5pFrame);
+
+  // Create Blackboard classic-learn-iframe
+  const frame = document.createElement("iframe");
+  frame.id = "classic-learn-iframe";
+  document.body.appendChild(frame);
 
   // Execute bookmarklet code
   const js = BOOKMARKLET_CODE.replace(/^javascript:/, "");
@@ -112,6 +113,11 @@ it("shows clear instructions when H5P is in a protected cross-origin frame", () 
 
   const toast = document.getElementById("h5p-toast");
   expect(toast).not.toBeNull();
-  expect(toast?.textContent).toContain("Click \"⎘ Reuse\" on Slide");
+  expect(toast?.textContent).toContain("Slide Detected: 1 Click Away!");
+
+  const pointer = document.getElementById("h5p-pointer");
+  expect(pointer).not.toBeNull();
+  expect(pointer?.textContent).toContain("Click ⎘ Reuse right here");
 });
+
 
