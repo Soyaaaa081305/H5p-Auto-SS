@@ -5,14 +5,19 @@ import { ExternalLink, Video } from "lucide-react";
 
 export function extractYouTubeId(url: unknown): string | null {
   if (!url || typeof url !== "string") return null;
-  const cleaned = url.replace(/&amp;/g, "&").trim().replace(/^['"]|['"]$/g, "");
+  const cleaned = url
+    .replace(/&amp;/g, "&")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
   const match = cleaned.match(
     /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/i,
   );
   if (match) return match[1];
 
   try {
-    const parsed = new URL(cleaned.startsWith("http") ? cleaned : `https://${cleaned}`);
+    const parsed = new URL(
+      cleaned.startsWith("http") ? cleaned : `https://${cleaned}`,
+    );
     if (parsed.hostname.includes("youtube.com")) {
       const v = parsed.searchParams.get("v");
       if (v && /^[\w-]{11}$/.test(v)) return v;
@@ -87,7 +92,9 @@ export function SafeMedia({
 
         {loadError && (
           <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
-            <span>Video playback restricted in embed? Click to open directly.</span>
+            <span>
+              Video playback restricted in embed? Click to open directly.
+            </span>
             <a
               href={directWatchUrl}
               target="_blank"
@@ -108,7 +115,10 @@ export function SafeMedia({
   if (!src) {
     return (
       <div className="p-3 my-2 rounded-xl bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between gap-2">
-        <span>Media unavailable. Verified study notes & answers remain accessible below.</span>
+        <span>
+          Media unavailable. Verified study notes & answers remain accessible
+          below.
+        </span>
         {path && /^https?:\/\//i.test(path) && (
           <a
             href={path}

@@ -1,7 +1,7 @@
 {
   "name": "H5P to PDF Converter & Study Tool",
   "short_name": "H5P to PDF",
-  "description": "1080p slide presentation converter, multi-module playlist, PDF exporter, and offline exam reviewer for H5P course modules.",
+  "description": "Review exported H5P course packages locally, inspect stored answers, and export study notes.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

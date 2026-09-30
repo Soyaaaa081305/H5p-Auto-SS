@@ -1,19 +1,18 @@
-import { safeHtml } from '../../lib/security';
-import React from 'react';
-import { InteractiveBookContent } from '../../types/h5p';
-import { resolveAsset } from '../../lib/h5pParser';
-import { ElementDispatcher } from './ElementDispatcher';
-import { BookOpen } from 'lucide-react';
+import { safeHtml } from "../../lib/security";
+import React from "react";
+import { InteractiveBookContent } from "../../types/h5p";
+import { resolveAsset } from "../../lib/h5pParser";
+import { ElementDispatcher } from "./ElementDispatcher";
+import { BookOpen } from "lucide-react";
 
 interface InteractiveBookRendererProps {
   content: InteractiveBookContent;
   assetMap: Map<string, string>;
 }
 
-export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = ({
-  content,
-  assetMap,
-}) => {
+export const InteractiveBookRenderer: React.FC<
+  InteractiveBookRendererProps
+> = ({ content, assetMap }) => {
   const chapters = Array.isArray(content.chapters) ? content.chapters : [];
   const coverImage = content.bookCover?.coverMedium?.params?.file?.path;
   const coverUrl = resolveAsset(coverImage, assetMap);
@@ -33,7 +32,9 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
           {content.bookCover?.coverDescription && (
             <div
               className="text-zinc-700 dark:text-zinc-300 text-base max-w-2xl mx-auto"
-              dangerouslySetInnerHTML={{ __html: safeHtml(content.bookCover.coverDescription) }}
+              dangerouslySetInnerHTML={{
+                __html: safeHtml(content.bookCover.coverDescription),
+              }}
             />
           )}
         </div>
@@ -41,7 +42,9 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
 
       {/* Chapters */}
       {chapters.map((chapter, cIdx) => {
-        const sections = Array.isArray(chapter.params?.content) ? chapter.params.content : [];
+        const sections = Array.isArray(chapter.params?.content)
+          ? chapter.params.content
+          : [];
 
         return (
           <section
@@ -53,14 +56,17 @@ export const InteractiveBookRenderer: React.FC<InteractiveBookRendererProps> = (
                 <BookOpen className="w-5 h-5" />
               </div>
               <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-sans">
-                Chapter {cIdx + 1}: {chapter.title || (chapter as any).metadata?.title || 'Untitled Chapter'}
+                Chapter {cIdx + 1}:{" "}
+                {chapter.title ||
+                  (chapter as any).metadata?.title ||
+                  "Untitled Chapter"}
               </h2>
             </div>
 
             <div className="space-y-6">
               {sections.map((section, sIdx) => {
                 const subContent = section.content || section.params || section;
-                const library = section.library || subContent?.library || '';
+                const library = section.library || subContent?.library || "";
 
                 return (
                   <div key={sIdx} className="space-y-3">

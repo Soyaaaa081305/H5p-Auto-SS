@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { H5PPackage } from '../types/h5p';
-import { exportSlidesToPdf, exportBatchToPdf } from '../lib/pdfExporter';
-import { externalUrl } from '../lib/security';
-import { extractYouTubeId } from './SafeMedia';
-import { ReviewerModal } from './ReviewerModal';
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import type { H5PPackage } from "../types/h5p";
+import { externalUrl } from "../lib/security";
+import { extractYouTubeId } from "./SafeMedia";
+import { ReviewerModal } from "./ReviewerModal";
 import {
   Download,
   RotateCcw,
@@ -13,7 +12,7 @@ import {
   Plus,
   X,
   Layers,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface ToolbarProps {
   packages: H5PPackage[];
@@ -28,7 +27,9 @@ function getModuleBadge(pkg: H5PPackage): string {
   return `${pkg.report.answers.length} q`;
 }
 function getModuleDescription(pkg: H5PPackage): string {
-  const recovered = pkg.report.answers.filter(a => a.status === 'extracted').length;
+  const recovered = pkg.report.answers.filter(
+    (a) => a.status === "extracted",
+  ).length;
   return `${recovered}/${pkg.report.answers.length} answer activities extracted`;
 }
 
@@ -43,7 +44,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const exportController = useRef<AbortController>();
   useEffect(() => () => exportController.current?.abort(), [packages]);
   const [isExporting, setIsExporting] = useState(false);
-  const [exportProgress, setExportProgress] = useState<string>('');
+  const [exportProgress, setExportProgress] = useState<string>("");
   const [showReviewer, setShowReviewer] = useState(false);
   const addFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,16 +56,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     try {
       exportController.current = new AbortController();
       setIsExporting(true);
-      setExportProgress('Preparing slides...');
-      await exportSlidesToPdf(currentPkg, (curr, total) => {
-        setExportProgress(`Compiling ${curr}/${total}`);
-      }, exportController.current.signal);
+      setExportProgress("Preparing slides...");
+      const { exportSlidesToPdf } = await import("../lib/pdfExporter");
+      await exportSlidesToPdf(
+        currentPkg,
+        (curr, total) => {
+          setExportProgress(`Compiling ${curr}/${total}`);
+        },
+        exportController.current.signal,
+      );
     } catch (err: any) {
       if (exportController.current?.signal.aborted) return;
-      alert('Failed to generate PDF: ' + (err?.message || 'Unknown error'));
+      alert("Failed to generate PDF: " + (err?.message || "Unknown error"));
     } finally {
       setIsExporting(false);
-      setExportProgress('');
+      setExportProgress("");
     }
   };
 
@@ -73,23 +79,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     try {
       exportController.current = new AbortController();
       setIsExporting(true);
-      setExportProgress('Merging all modules...');
-      await exportBatchToPdf(packages, (curr, total, modName) => {
-        setExportProgress(`Item ${curr}/${total} (${modName.slice(0, 15)}...)`);
-      }, exportController.current.signal);
+      setExportProgress("Merging all modules...");
+      const { exportBatchToPdf } = await import("../lib/pdfExporter");
+      await exportBatchToPdf(
+        packages,
+        (curr, total, modName) => {
+          setExportProgress(
+            `Item ${curr}/${total} (${modName.slice(0, 15)}...)`,
+          );
+        },
+        exportController.current.signal,
+      );
     } catch (err: any) {
       if (exportController.current?.signal.aborted) return;
-      alert('Failed to batch merge PDF: ' + (err?.message || 'Unknown error'));
+      alert("Failed to batch merge PDF: " + (err?.message || "Unknown error"));
     } finally {
       setIsExporting(false);
-      setExportProgress('');
+      setExportProgress("");
     }
   };
 
   const handleAddFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       onAddFiles(Array.from(e.target.files));
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
@@ -110,7 +123,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       currentPkg.content?.interactiveVideo?.sources ||
       [];
     for (const s of ivSources) {
-      const p = typeof s === 'string' ? s : s?.path || s?.url;
+      const p = typeof s === "string" ? s : s?.path || s?.url;
       const yId = extractYouTubeId(p);
       if (yId) {
         yUrl = `https://www.youtube.com/watch?v=${yId}`;
@@ -122,24 +135,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     const slides: any[] = currentPkg.content?.presentation?.slides || [];
     slides.forEach((s) => {
       (s.elements || []).forEach((el: any) => {
-        if (el.action?.library?.includes('Link')) {
-          let u = el.action.params?.linkWidget?.url || el.action.params?.url || '';
-          const proto = el.action.params?.linkWidget?.protocol || '';
-          if (proto && !u.startsWith('http://') && !u.startsWith('https://')) {
+        if (el.action?.library?.includes("Link")) {
+          let u =
+            el.action.params?.linkWidget?.url || el.action.params?.url || "";
+          const proto = el.action.params?.linkWidget?.protocol || "";
+          if (proto && !u.startsWith("http://") && !u.startsWith("https://")) {
             u = `${proto}${u}`;
           }
-          u = u.replace(/&amp;/g, '&');
+          u = u.replace(/&amp;/g, "&");
           const yId = extractYouTubeId(u);
           if (yId && !yUrl) {
             yUrl = `https://www.youtube.com/watch?v=${yId}`;
           }
-          if (u.includes('canva.com') && !cUrl) {
+          if (u.includes("canva.com") && !cUrl) {
             cUrl = externalUrl(u) || null;
           } else if (!cUrl && externalUrl(u)) {
             cUrl = externalUrl(u) || null;
           }
-        } else if (el.action?.library?.includes('Video')) {
-          const src = (el.action.params?.sources || el.action.params?.files)?.[0]?.path;
+        } else if (el.action?.library?.includes("Video")) {
+          const src = (el.action.params?.sources ||
+            el.action.params?.files)?.[0]?.path;
           const yId = extractYouTubeId(src);
           if (yId && !yUrl) {
             yUrl = `https://www.youtube.com/watch?v=${yId}`;
@@ -156,9 +171,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     () =>
       packages.reduce(
         (sum, p) => sum + (p.content?.presentation?.slides?.length || 0),
-        0
+        0,
       ),
-    [packages]
+    [packages],
   );
 
   return (
@@ -193,8 +208,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     key={pkgItem.fileName + idx}
                     className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all flex-shrink-0 cursor-pointer ${
                       isActive
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold shadow-2xs'
-                        : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300'
+                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold shadow-2xs"
+                        : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300"
                     }`}
                     onClick={() => onSelectPackage(idx)}
                     title={pTitle}
@@ -205,8 +220,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <span
                       className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
                         isActive
-                          ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
-                          : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
+                          ? "bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800"
+                          : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400"
                       }`}
                     >
                       {pBadge}
@@ -220,8 +235,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         }}
                         className={`p-0.5 rounded hover:bg-rose-500 hover:text-white transition-colors ml-0.5 ${
                           isActive
-                            ? 'text-zinc-400 dark:text-zinc-600'
-                            : 'text-zinc-400 dark:text-zinc-500'
+                            ? "text-zinc-400 dark:text-zinc-600"
+                            : "text-zinc-400 dark:text-zinc-500"
                         }`}
                         title="Remove module from playlist"
                       >
@@ -323,7 +338,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               {isExporting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>{exportProgress || 'Merging...'}</span>
+                  <span>{exportProgress || "Merging..."}</span>
                 </>
               ) : (
                 <>
@@ -344,20 +359,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={handleDownloadSinglePdf}
             disabled={isExporting}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-            title={packages.length > 1 ? 'Download this current module PDF' : 'Download full PDF'}
+            title={
+              packages.length > 1
+                ? "Download this current module PDF"
+                : "Download full PDF"
+            }
           >
             {isExporting && packages.length === 1 ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>{exportProgress || 'Exporting...'}</span>
+                <span>{exportProgress || "Exporting..."}</span>
               </>
             ) : (
               <>
                 <Download className="w-3.5 h-3.5" />
                 <span>
                   {packages.length > 1
-                    ? (hasSlides ? 'This Module PDF' : 'This Module Study PDF')
-                    : (hasSlides ? 'Download PDF' : 'Download Study PDF')}
+                    ? hasSlides
+                      ? "This Module PDF"
+                      : "This Module Study PDF"
+                    : hasSlides
+                      ? "Download PDF"
+                      : "Download Study PDF"}
                 </span>
               </>
             )}

@@ -11,13 +11,4 @@ export default defineConfig({
         html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, ""),
     },
   ],
-  build: {
-    rolldownOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("/jspdf/")) return "jspdf";
-        },
-      },
-    },
-  },
 });

@@ -36,7 +36,9 @@ export function InteractiveVideoRenderer({
   const videoPath =
     typeof activeSource === "string"
       ? activeSource
-      : activeSource?.path || activeSource?.url || (typeof iv.video === "string" ? iv.video : undefined);
+      : activeSource?.path ||
+        activeSource?.url ||
+        (typeof iv.video === "string" ? iv.video : undefined);
 
   const videoTitle = iv.video?.title || content.title || "Interactive Video";
 
@@ -67,7 +69,10 @@ export function InteractiveVideoRenderer({
               <Clock className="w-3 h-3 text-indigo-500" />
               <span>
                 {Math.floor((i.duration?.from || 0) / 60)}:
-                {String(Math.floor((i.duration?.from || 0) % 60)).padStart(2, "0")}
+                {String(Math.floor((i.duration?.from || 0) % 60)).padStart(
+                  2,
+                  "0",
+                )}
               </span>
             </span>
           </div>

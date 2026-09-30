@@ -42,7 +42,15 @@ export function safeHtml(value: unknown): string {
       "code",
       "a",
     ],
-    ALLOWED_ATTR: ["href", "target", "rel", "title", "class", "colspan", "rowspan"],
+    ALLOWED_ATTR: [
+      "href",
+      "target",
+      "rel",
+      "title",
+      "class",
+      "colspan",
+      "rowspan",
+    ],
   });
 }
 

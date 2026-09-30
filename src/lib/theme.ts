@@ -1,22 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export function useTheme() {
   const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === "undefined") return false;
     let saved: string | null = null;
-    try { saved = localStorage.getItem('h5p_theme'); } catch { /* Storage can be disabled. */ }
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    try {
+      saved = localStorage.getItem("h5p_theme");
+    } catch {
+      /* Storage can be disabled. */
+    }
+    if (saved) return saved === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
     const root = document.documentElement;
     if (isDark) {
-      root.classList.add('dark');
-      try { localStorage.setItem('h5p_theme', 'dark'); } catch { /* Theme still works in memory. */ }
+      root.classList.add("dark");
+      try {
+        localStorage.setItem("h5p_theme", "dark");
+      } catch {
+        /* Theme still works in memory. */
+      }
     } else {
-      root.classList.remove('dark');
-      try { localStorage.setItem('h5p_theme', 'light'); } catch { /* Theme still works in memory. */ }
+      root.classList.remove("dark");
+      try {
+        localStorage.setItem("h5p_theme", "light");
+      } catch {
+        /* Theme still works in memory. */
+      }
     }
   }, [isDark]);
 

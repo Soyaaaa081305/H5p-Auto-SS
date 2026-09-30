@@ -200,9 +200,10 @@ class Pages {
       if (this.currentModuleTitle) {
         this.ctx.fillStyle = "#0f172a";
         this.ctx.font = "bold 18px sans-serif";
-        const titleText = this.currentModuleTitle.length > 80
-          ? `${this.currentModuleTitle.slice(0, 77)}...`
-          : this.currentModuleTitle;
+        const titleText =
+          this.currentModuleTitle.length > 80
+            ? `${this.currentModuleTitle.slice(0, 77)}...`
+            : this.currentModuleTitle;
         this.ctx.fillText(titleText, 325, 54);
       }
 
@@ -222,7 +223,11 @@ class Pages {
 
       this.ctx.fillStyle = "#94a3b8";
       this.ctx.font = "13px sans-serif";
-      this.ctx.fillText("H5P to PDF Converter • Verified Solutions", 90, H - 24);
+      this.ctx.fillText(
+        "H5P to PDF Converter • Verified Solutions",
+        90,
+        H - 24,
+      );
 
       this.ctx.restore();
       this.y = 100;
@@ -274,7 +279,17 @@ class Pages {
         this.ctx.font = `${heading ? "bold 28" : "22"}px sans-serif`;
       }
       if (answer) {
-        drawRoundRect(this.ctx, 80, this.y - 24, W - 160, 32, 6, "#ecfdf5", "#a7f3d0", 1);
+        drawRoundRect(
+          this.ctx,
+          80,
+          this.y - 24,
+          W - 160,
+          32,
+          6,
+          "#ecfdf5",
+          "#a7f3d0",
+          1,
+        );
       }
       this.ctx.fillStyle = answer ? "#065f46" : heading ? "#0f172a" : "#334155";
       this.ctx.fillText(line, 90, this.y);
@@ -313,7 +328,9 @@ class Pages {
     for (const p of parts) {
       const val =
         p.values.join(" / ") ||
-        (!p.images?.length ? "No statement or question authored in module" : "");
+        (!p.images?.length
+          ? "No statement or question authored in module"
+          : "");
       let targetText: string | undefined;
       if (p.target) {
         targetText = `Drop position: ${p.target.x.toFixed(1)}% across, ${p.target.y.toFixed(1)}% down`;
@@ -600,10 +617,7 @@ class Pages {
     this.dirty = true;
   }
 
-  renderGiantCard(
-    a: AnswerItem,
-    parts: { label: string; value: string }[],
-  ) {
+  renderGiantCard(a: AnswerItem, parts: { label: string; value: string }[]) {
     this.text(`${a.location} · ${statusLabel[a.status]}`, true);
     if (a.prompt) this.text(a.prompt);
     for (const p of parts) {

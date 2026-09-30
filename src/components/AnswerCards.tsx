@@ -72,7 +72,9 @@ export function AnswerCards({
               </span>
 
               {answer.parts.map((part, i) => {
-                const hasContent = part.values.length > 0 || (part.images && part.images.length > 0);
+                const hasContent =
+                  part.values.length > 0 ||
+                  (part.images && part.images.length > 0);
                 return (
                   <div
                     key={i}
@@ -88,18 +90,24 @@ export function AnswerCards({
                       </span>
                       <span className="font-semibold text-emerald-950 dark:text-emerald-100 leading-normal">
                         {part.values.join(" / ") ||
-                          (!part.images?.length ? "No statement or question authored in module" : "")}
+                          (!part.images?.length
+                            ? "No statement or question authored in module"
+                            : "")}
                       </span>
                     </div>
 
                     {part.target && (
                       <span className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-1.5">
-                        Drop position: {part.target.x.toFixed(1)}% across, {part.target.y.toFixed(1)}% down
+                        Drop position: {part.target.x.toFixed(1)}% across,{" "}
+                        {part.target.y.toFixed(1)}% down
                       </span>
                     )}
 
                     {part.images?.map((path) => (
-                      <div key={path} className="mt-2.5 rounded-lg overflow-hidden border border-emerald-200 dark:border-emerald-800/60 max-w-md">
+                      <div
+                        key={path}
+                        className="mt-2.5 rounded-lg overflow-hidden border border-emerald-200 dark:border-emerald-800/60 max-w-md"
+                      >
                         <SafeMedia
                           path={path}
                           assetMap={assetMap}
@@ -117,7 +125,9 @@ export function AnswerCards({
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-200/80 dark:border-zinc-750 text-xs text-zinc-600 dark:text-zinc-300 flex items-start gap-2">
                 <HelpCircle className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
                 <div className="leading-relaxed">
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200 mr-1.5">Note:</span>
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200 mr-1.5">
+                    Note:
+                  </span>
                   <span>{answer.explanation}</span>
                 </div>
               </div>
@@ -130,8 +140,12 @@ export function AnswerCards({
                   <span>Source details</span>
                 </summary>
                 <div className="mt-2 pl-3 py-1 font-mono text-[11px] space-y-1 text-zinc-500 dark:text-zinc-400 border-l-2 border-zinc-200 dark:border-zinc-700">
-                  <p>{answer.library} {answer.version}</p>
-                  <p className="break-all text-[10px] text-zinc-400">{answer.sourcePath}</p>
+                  <p>
+                    {answer.library} {answer.version}
+                  </p>
+                  <p className="break-all text-[10px] text-zinc-400">
+                    {answer.sourcePath}
+                  </p>
                 </div>
               </details>
             )}
