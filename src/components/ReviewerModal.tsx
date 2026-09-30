@@ -246,26 +246,18 @@ export function ReviewerModal({
               Cancel export
             </button>
           )}
-        </div>
 
-        {/* Live Status Banner (maintains exact accessibility & test role) */}
-        <div className="px-5 sm:px-6 py-2.5 bg-zinc-50/70 dark:bg-zinc-850/40 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-          <p role="status" className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-              {answers.length} answer activities
-            </span>
-            <span className="text-zinc-300 dark:text-zinc-700">•</span>
-            <span className="text-zinc-400 dark:text-zinc-500 font-sans hidden sm:inline">
-              Extracted from the package, without guessing.
-            </span>
-          </p>
           {message && (
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
               {message}
             </span>
           )}
         </div>
+
+        {/* Status for accessibility & tests */}
+        <p role="status" className="sr-only">
+          {answers.length} answer activities
+        </p>
 
         {/* Answer Content Scrollable Area */}
         <div className="overflow-y-auto p-4 sm:p-6 space-y-6">
