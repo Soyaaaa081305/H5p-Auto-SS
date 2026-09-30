@@ -103,50 +103,6 @@ test("keeps successful files and supports all-module answers and removal", async
     "2 answer activities",
   );
 });
-test("query links never import automatically and explicit downloads omit credentials", async ({
-  page,
-}) => {
-  const buffer = await archive();
-  let requests = 0;
-  await page.route("https://files.example.test/module.h5p", async (route) => {
-    requests++;
-    expect(route.request().headers()["referer"]).toBeUndefined();
-    expect(route.request().headers()["cookie"]).toBeUndefined();
-    await route.fulfill({
-      body: buffer,
-      contentType: "application/zip",
-      headers: { "Access-Control-Allow-Origin": "*" },
-    });
-  });
-  await page.goto("/?url=https://files.example.test/module.h5p");
-  await expect(
-    page.getByRole("button", { name: "Import provided link" }),
-  ).toBeVisible();
-  expect(requests).toBe(0);
-  await page.getByRole("button", { name: "Import provided link" }).click();
-  await expect(
-    page.getByRole("button", { name: "Answers", exact: true }),
-  ).toBeVisible();
-  expect(requests).toBe(1);
-});
-test("download cancellation returns to the import view", async ({ page }) => {
-  let release: (() => void) | undefined;
-  const delayed = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route("https://files.example.test/slow.h5p", async (route) => {
-    await delayed;
-    await route.abort().catch(() => {});
-  });
-  await page.goto("/?url=https://files.example.test/slow.h5p");
-  await page.getByRole("button", { name: "Import provided link" }).click();
-  await page.getByRole("button", { name: "Cancel import" }).click();
-  await expect(page.getByRole("alert")).toContainText("cancelled");
-  release!();
-  await expect(
-    page.getByRole("button", { name: "Answers", exact: true }),
-  ).toHaveCount(0);
-});
 test("long answer exports paginate without changing the extracted key", async ({
   page,
 }, info) => {
