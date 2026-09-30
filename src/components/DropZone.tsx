@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Plus, FileCode2, HelpCircle, CheckCircle2, X } from 'lucide-react';
+import { Loader2, Plus, FileCode2, HelpCircle, CheckCircle2, X, RefreshCw } from 'lucide-react';
 
 interface DropZoneProps {
   onFilesLoaded: (files: File[]) => Promise<void>;
@@ -162,7 +162,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     Open your course slide module on Blackboard (e.g. <strong className="font-semibold text-zinc-900 dark:text-zinc-100">2.1 - Memory and Remanence</strong>).
                   </li>
                   <li>
-                    Look at the <strong className="font-semibold text-zinc-900 dark:text-zinc-100">bottom-left corner</strong> of the slide (next to the H5P logo) and click <strong className="font-semibold text-zinc-900 dark:text-zinc-100">⎘ Reuse</strong>.
+                    Look at the <strong className="font-semibold text-zinc-900 dark:text-zinc-100">bottom-left corner</strong> of the slide (next to the H5P logo) and click <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-[11px] align-baseline shadow-2xs"><RefreshCw className="w-3 h-3 text-zinc-600 dark:text-zinc-300 stroke-[2.5]" /> Reuse</span>.
                   </li>
                   <li>
                     Click <strong className="font-semibold text-zinc-900 dark:text-zinc-100">"Download as an .h5p file"</strong>.
