@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Copy, Download, BookOpen, Search, Check, Video, Loader2 } from "lucide-react";
+import { X, Copy, Download, BookOpen, Search, Check, Video, Loader2, ChevronDown } from "lucide-react";
 import type { H5PPackage } from "../types/h5p";
 import { DragTargetPreview } from "./DragTargetPreview";
 import { AnswerCards } from "./AnswerCards";
@@ -161,14 +161,14 @@ export function ReviewerModal({
 
         {/* Toolbar & Filter Bar */}
         <div className="p-3.5 sm:p-4 flex flex-wrap items-center gap-2.5 sm:gap-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[200px] h-9">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               aria-label="Search answers"
               placeholder="Search answers"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/70 dark:bg-zinc-800/60 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-sans"
+              className="w-full h-full pl-9 pr-8 rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/70 dark:bg-zinc-800/60 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-sans"
             />
             {query && (
               <button
@@ -181,20 +181,23 @@ export function ReviewerModal({
             )}
           </div>
 
-          <select
-            aria-label="Answer modules"
-            value={all ? "all" : "current"}
-            onChange={(e) => setAll(e.target.value === "all")}
-            className="rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/70 dark:bg-zinc-800/60 px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
-          >
-            <option value="current">Current module</option>
-            <option value="all">All modules ({packages.length})</option>
-          </select>
+          <div className="relative inline-flex items-center">
+            <select
+              aria-label="Answer modules"
+              value={all ? "all" : "current"}
+              onChange={(e) => setAll(e.target.value === "all")}
+              className="h-9 appearance-none rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/70 dark:bg-zinc-800/60 pl-3 pr-8 text-xs font-semibold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
+            >
+              <option value="current">Current module</option>
+              <option value="all">All modules ({packages.length})</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
 
           <button
             type="button"
             onClick={copy}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-zinc-700 dark:text-zinc-200 font-semibold text-xs shadow-2xs transition-all active:scale-95 cursor-pointer"
+            className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-zinc-700 dark:text-zinc-200 font-semibold text-xs shadow-2xs transition-all active:scale-95 cursor-pointer"
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -227,7 +230,7 @@ export function ReviewerModal({
                 setExporting(false);
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
           >
             {exporting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -241,14 +244,14 @@ export function ReviewerModal({
             <button
               type="button"
               onClick={() => exportController.current?.abort()}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-medium hover:bg-rose-100 transition-colors"
+              className="h-9 inline-flex items-center gap-1 px-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-medium hover:bg-rose-100 transition-colors"
             >
               Cancel export
             </button>
           )}
 
           {message && (
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <span className="h-9 inline-flex items-center text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
               {message}
             </span>
           )}
