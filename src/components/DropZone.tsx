@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Loader2, Plus, FileCode2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Loader2, Plus, FileCode2, Sparkles, CheckCircle2, X } from 'lucide-react';
 
 interface DropZoneProps {
   onFilesLoaded: (files: File[]) => Promise<void>;
@@ -16,6 +17,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -102,31 +104,95 @@ export const DropZone: React.FC<DropZoneProps> = ({
         </div>
       </div>
 
-      {/* Blackboard 2-Click Quick Guide Card */}
-      <div className="mt-8 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-xs space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-zinc-100">
-          <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
-          <span>How to download from Blackboard (2 quick clicks):</span>
-        </div>
-        <ol className="list-decimal pl-5 text-xs space-y-1.5 text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          <li>
-            Open your course slide module on Blackboard (e.g. <em>2.1 - Memory and Remanence</em>).
-          </li>
-          <li>
-            Look at the <strong>bottom-left corner</strong> of the slide (next to the H5P logo) and click <strong>⎘ Reuse</strong>.
-          </li>
-          <li>
-            Click <strong>"Download as an .h5p file"</strong>.
-          </li>
-          <li>
-            Drop the downloaded file right here to view all questions, answers, and printable PDF notes!
-          </li>
-        </ol>
-        <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium pt-1">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>100% private & client-side — your files never leave your browser.</span>
-        </div>
+      {/* Trigger: Blackboard Download Guide Modal */}
+      <div className="mt-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setShowHelpModal(true)}
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors py-1.5 px-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-850 font-medium"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <span>How to download from Blackboard (2 quick clicks)</span>
+        </button>
       </div>
+
+      {/* Blackboard Download Guide Modal Popup */}
+      {showHelpModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-zinc-950/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowHelpModal(false);
+            }}
+          >
+            <div
+              className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative z-[10000] p-6 space-y-5 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-sans">
+                      How to download from Blackboard
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                      2 quick clicks to get your .h5p file
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(false)}
+                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  title="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Steps */}
+              <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-850/60 space-y-3 text-xs">
+                <ol className="list-decimal pl-5 space-y-2 text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">
+                  <li>
+                    Open your course slide module on Blackboard (e.g. <strong className="font-semibold text-zinc-900 dark:text-zinc-100">2.1 - Memory and Remanence</strong>).
+                  </li>
+                  <li>
+                    Look at the <strong className="font-semibold text-zinc-900 dark:text-zinc-100">bottom-left corner</strong> of the slide (next to the H5P logo) and click <strong className="font-semibold text-zinc-900 dark:text-zinc-100">⎘ Reuse</strong>.
+                  </li>
+                  <li>
+                    Click <strong className="font-semibold text-zinc-900 dark:text-zinc-100">"Download as an .h5p file"</strong>.
+                  </li>
+                  <li>
+                    Drop the downloaded file right here to view all questions, answers, and printable PDF notes!
+                  </li>
+                </ol>
+              </div>
+
+              {/* Privacy Footer */}
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/80 dark:border-emerald-800/80 text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                <span>100% private & client-side — your files never leave your browser.</span>
+              </div>
+
+              {/* Action Button */}
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowHelpModal(false)}
+                  className="px-4 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white font-semibold text-xs shadow-xs transition-colors"
+                >
+                  Got It!
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Error notification if any */}
       {error && (
