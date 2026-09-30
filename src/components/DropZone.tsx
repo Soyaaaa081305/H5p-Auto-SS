@@ -112,7 +112,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors py-1.5 px-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-850 font-medium"
         >
           <HelpCircle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-          <span>How to download from Blackboard (2 quick clicks)</span>
+          <span>How to download from Blackboard</span>
         </button>
       </div>
 
@@ -140,7 +140,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                       How to download from Blackboard
                     </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
-                      2 quick clicks to get your .h5p file
+                      Steps to get your .h5p file
                     </p>
                   </div>
                 </div>
