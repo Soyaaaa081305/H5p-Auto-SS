@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Plus, FileCode2, HelpCircle, CheckCircle2, X, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, FileCode2, HelpCircle, X, RefreshCw } from 'lucide-react';
 
 interface DropZoneProps {
   onFilesLoaded: (files: File[]) => Promise<void>;
@@ -171,12 +171,6 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     Drop the downloaded file right here to view all questions, answers, and printable PDF notes!
                   </li>
                 </ol>
-              </div>
-
-              {/* Privacy Footer */}
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/80 dark:border-emerald-800/80 text-xs text-emerald-900 dark:text-emerald-200 font-medium">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <span>100% private & client-side — your files never leave your browser.</span>
               </div>
 
               {/* Action Button */}
